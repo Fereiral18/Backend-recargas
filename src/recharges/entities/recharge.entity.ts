@@ -52,6 +52,21 @@ export class Recharge {
   reference: string;
 
   @Column({ nullable: true })
+  package: string; // Diamond package ID (e.g., 'SMALL', 'BASIC', etc.)
+
+  @Column({ nullable: true })
+  currency: string; // Payment currency (USDT, PAYPAL, etc.)
+
+  @Column({ nullable: true })
+  payment_method: string; // Payment method (Binance, MetaMask, etc.)
+
+  @Column({ nullable: true })
+  transaction_id: string; // External transaction ID
+
+  @Column({ nullable: true })
+  proof_image_path: string; // Path to uploaded proof image
+
+  @Column({ nullable: true })
   provider_reference: string;
 
   @Column({ type: 'json', nullable: true })
