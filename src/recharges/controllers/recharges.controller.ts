@@ -7,12 +7,24 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Res,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RechargesService } from '../services/recharges.service';
 import { CreateRechargeDto } from '../dto/create-recharge.dto';
 import { UpdateRechargeDto } from '../dto/update-recharge.dto';
 import { JwtAuthGuard } from '../../users/guards/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { multerConfig } from '../../common/config/multer.config';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '../../common/enums';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 @ApiTags('recharges')
 @ApiBearerAuth()
@@ -23,7 +35,16 @@ export class RechargesController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new recharge' })
-  create(@Body() createRechargeDto: CreateRechargeDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('proof_image', multerConfig))
+  create(
+    @Body() createRechargeDto: CreateRechargeDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    // Si hay archivo, agregar la ruta al DTO
+    if (file) {
+      createRechargeDto.proof_image_path = `/uploads/proofs/${file.filename}`;
+    }
     return this.rechargesService.create(createRechargeDto);
   }
 
@@ -33,6 +54,7 @@ export class RechargesController {
     @Query('user_id') user_id?: string,
     @Query('operator') operator?: string,
     @Query('status') status?: string,
+    @Query('search') search?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -40,6 +62,7 @@ export class RechargesController {
       user_id,
       operator,
       status,
+      search,
       page,
       limit,
     });
@@ -55,6 +78,49 @@ export class RechargesController {
   @ApiOperation({ summary: 'Get recharge by UUID' })
   findOne(@Param('uuid') uuid: string) {
     return this.rechargesService.findOne(uuid);
+  }
+
+  @Get(':uuid/proof')
+  @ApiOperation({ summary: 'Get proof image for a recharge (protected)' })
+  async getProofImage(
+    @Param('uuid') uuid: string,
+    @CurrentUser() user: { uuid: string; role: UserRole },
+    @Res() res: Response,
+  ) {
+    const recharge = await this.rechargesService.findOne(uuid);
+    
+    if (!recharge) {
+      throw new NotFoundException('Recarga no encontrada');
+    }
+
+    // Verificar que el usuario sea el dueño o sea admin
+    if (recharge.user_id !== user.uuid && user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('No tienes permiso para ver este comprobante');
+    }
+
+    if (!recharge.proof_image_path) {
+      throw new NotFoundException('Esta recarga no tiene comprobante');
+    }
+
+    // Construir la ruta absoluta del archivo
+    // proof_image_path es algo como "/uploads/proofs/uuid.webp"
+    const fileName = recharge.proof_image_path.replace('/uploads/proofs/', '');
+    const filePath = join(process.cwd(), 'uploads', 'proofs', fileName);
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Archivo de comprobante no encontrado');
+    }
+
+    return res.sendFile(filePath);
+  }
+
+  @Patch(':uuid/cancel')
+  @ApiOperation({ summary: 'Cancel own recharge (only if PENDING and < 10 min old)' })
+  async cancelByUser(
+    @Param('uuid') uuid: string,
+    @CurrentUser() user: { uuid: string; role: UserRole },
+  ) {
+    return this.rechargesService.cancelByUser(uuid, user.uuid);
   }
 
   @Patch(':uuid')

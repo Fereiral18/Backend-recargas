@@ -1,0 +1,95 @@
+.signup-form {
+  width: 100%;
+}
+
+.form_label {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: #2a2e34;
+  padding: 0 0 9px 2px;
+  display: block;
+}
+.cu-form_row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 0 0 15px;
+
+}
+
+.cu-form-input {
+  width: 100%;
+  border: 1px solid #d6d9de;
+  border-radius: 9px;
+  padding: 0 20px 0 36px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  height: 40px;
+  color: #2a2e34;
+}
+.cu-form-icon {
+  position: absolute;
+  
+  left: 10px;
+  color: #b9bec7;
+}
+.text-sm{
+  width: 100%;
+  height: 20px;
+  display: flex;
+  justify-content: end;
+  align-items: start;
+  margin-top: -15px;
+}
+.show-pwd {
+  margin-block-start: 8px;
+  right: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px dashed transparent;
+  color: rgb(4, 163, 248);
+  border: none;
+}
+
+.separations {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color:transparent;
+}
+.circle {
+  color: hsl(220, 2%, 71%);
+}
+.line {
+  height: 2px;
+  width: 45%;
+  margin: 0 10px;
+  border-bottom: 1px solid hsl(220, 2%, 71%);
+}
+.btn-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  border-radius: 9px;
+  height: 50px;
+  
+  background-color: #44cde5;
+  border: none;
+}
+.btn-block:hover {
+  background-color: rgb(2, 99, 218);;
+}
+.btn-text {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+}

@@ -5,5 +5,6 @@ export enum RechargeType {
   CRYSTALS = 'CRYSTALS',
   BATTLE_PASS = 'BATTLE_PASS',
   BUNDLE = 'BUNDLE',
+  PB_CARD = 'PB_CARD',
   OTHER = 'OTHER',
 }

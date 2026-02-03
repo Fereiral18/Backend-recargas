@@ -5,6 +5,8 @@ import {
   Body,
   UseGuards,
   Request,
+  Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +18,7 @@ import { UsersService } from '../services/users.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
+import { UserRole } from '../../common/enums';
 
 /**
  * Controller for user management
@@ -27,6 +30,54 @@ import type { AuthenticatedRequest } from '../interfaces/authenticated-request.i
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all users (admin only)' })
+  @ApiResponse({ status: 200, description: 'List of users' })
+  async findAll(
+    @Request() req: AuthenticatedRequest,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    // Solo admins pueden listar usuarios
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Solo administradores pueden ver la lista de usuarios');
+    }
+
+    const result = await this.usersService.findAll({ role, status, search, page, limit });
+
+    return {
+      message: 'Users retrieved successfully',
+      data: result.users,
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+      },
+    };
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get user statistics (admin only)' })
+  @ApiResponse({ status: 200, description: 'User statistics' })
+  async getStats(@Request() req: AuthenticatedRequest) {
+    // Solo admins pueden ver estadísticas
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Solo administradores pueden ver estadísticas');
+    }
+
+    const totalUsers = await this.usersService.count();
+
+    return {
+      message: 'Stats retrieved successfully',
+      data: {
+        total: totalUsers,
+      },
+    };
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })

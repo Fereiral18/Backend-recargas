@@ -39,6 +39,7 @@ export class SupportTicketsController {
     @Query('assigned_to') assigned_to?: string,
     @Query('status') status?: string,
     @Query('priority') priority?: string,
+    @Query('search') search?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -47,6 +48,7 @@ export class SupportTicketsController {
       assigned_to,
       status,
       priority,
+      search,
       page,
       limit,
     });
