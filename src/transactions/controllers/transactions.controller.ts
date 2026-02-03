@@ -45,6 +45,12 @@ export class TransactionsController {
     });
   }
 
+  @Get('stats')
+  @ApiOperation({ summary: 'Get transaction statistics' })
+  getStats(@Query('user_id') user_id?: string) {
+    return this.transactionsService.getStats(user_id);
+  }
+
   @Get('balance/:user_id')
   @ApiOperation({ summary: 'Get user balance summary' })
   getUserBalance(@Param('user_id') user_id: string) {

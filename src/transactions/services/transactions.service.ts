@@ -103,4 +103,24 @@ export class TransactionsService {
       total_transactions: transactions.length,
     };
   }
+
+  async getStats(user_id?: string) {
+    const query = this.transactionRepository.createQueryBuilder('transaction');
+
+    if (user_id) {
+      query.where('transaction.user_id = :user_id', { user_id });
+    }
+
+    const total = await query.getCount();
+    const pending = await query
+      .clone()
+      .andWhere('transaction.status = :status', { status: TransactionStatus.PENDING })
+      .getCount();
+
+    return {
+      total,
+      pending,
+      completed: total - pending,
+    };
+  }
 }
