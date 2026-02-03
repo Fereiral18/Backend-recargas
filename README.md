@@ -1,4 +1,4 @@
-# 🎮 Sistema de Recargas Free Fire
+
 
 Sistema fullstack para gestionar recargas de diamantes de Free Fire con panel de administración.
 
@@ -158,8 +158,4 @@ Documentación completa: http://localhost:4000/api
 ```bash
 cd be && npm run test:e2e
 cd fe/recargas-app && npm run test
-```
-
-## 📄 Licencia
-
-MIT
+``
