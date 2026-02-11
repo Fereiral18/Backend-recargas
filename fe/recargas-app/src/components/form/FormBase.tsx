@@ -1,8 +1,8 @@
 import React from 'react';
 import { ChangeEvent, FormEvent } from "react";
 import "./style.css";
-import { Config } from './fromType';
-import Input from './Input';
+import { Config } from './fromType.js';
+import Input from './Input.js';
 import { Link } from 'react-router-dom';
 
 

@@ -21,16 +21,7 @@ export default function Input({
 
   return (
     <div>
-      <div className="flex justify-between align-center">
-        <label
-          htmlFor={labelId}
-          className="form_label"
-          style={{ paddingTop: "9px" }}
-        >
-          {children}
-        </label>
       
-      </div>
       <div className="cu-form_row">
         <div className="cu-form-icon">
           

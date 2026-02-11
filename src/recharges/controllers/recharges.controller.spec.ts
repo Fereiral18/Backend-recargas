@@ -3,6 +3,13 @@ import { RechargesController } from './recharges.controller';
 import { RechargesService } from '../services/recharges.service';
 import { RechargeStatus, RechargeType, GameOperator } from '../../common/enums';
 
+interface Dto {
+    user_id: string;
+    type?: RechargeType;
+    operator?: GameOperator;
+    amount: number;
+    game_id: string;
+}
 describe('RechargesController', () => {
   let controller: RechargesController;
   let service: jest.Mocked<RechargesService>;

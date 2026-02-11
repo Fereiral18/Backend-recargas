@@ -44,14 +44,6 @@ export default function RegisterForm() {
 			required: true,
 		},
 		{
-			labelText: 'Teléfono (opcional)',
-			labelId: 'phone',
-			type: 'tel',
-			value: phone,
-			placeholder: '+54 9 11 1234-5678',
-			required: false,
-		},
-		{
 			labelText: 'Contraseña',
 			labelId: 'password',
 			type: 'password',
