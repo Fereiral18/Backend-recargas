@@ -1,0 +1,5 @@
+export declare enum MessageType {
+    USER_MESSAGE = "USER_MESSAGE",
+    ADMIN_RESPONSE = "ADMIN_RESPONSE",
+    SYSTEM_MESSAGE = "SYSTEM_MESSAGE"
+}
