@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, authService } from '../../services';
 import { toast } from 'react-toastify';
-import './ProfilePage.css';
+
 
 export const ProfilePage = () => {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { transactionService } from '../../services';
 import { TransactionTypeLabels, TransactionStatusLabels } from '../../constants/enums';
 import { toast } from 'react-toastify';
-import './TransactionsPage.css';
+
 
 export const TransactionsPage = () => {
   const navigate = useNavigate();

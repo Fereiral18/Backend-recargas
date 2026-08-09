@@ -7,7 +7,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import DiamondIcon from "@mui/icons-material/Diamond";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import "./style.css";
+
 import { useState, useEffect } from "react";
 import { userService, rechargeService } from "../../services";
 import { toast } from "react-toastify";

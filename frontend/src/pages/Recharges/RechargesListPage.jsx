@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { rechargeService } from '../../services';
 import { RechargeStatusLabels, GameOperatorLabels, RechargeTypeLabels, GameOperator, DiamondPackages, PBCardPackage } from '../../constants/enums';
 import { toast } from 'react-toastify';
-import './RechargesPage.css';
+
 
 export const RechargesListPage = () => {
   const navigate = useNavigate();

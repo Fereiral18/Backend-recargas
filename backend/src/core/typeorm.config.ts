@@ -9,7 +9,7 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   database: process.env.DB_NAME || 'recargas_gaming',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   autoLoadEntities: true,
-  synchronize: true,
+  synchronize: false,
   dropSchema: false,
   logging: true,
   logger: 'file',
