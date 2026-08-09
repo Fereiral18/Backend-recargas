@@ -5,7 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import { Login } from "../pages/Login/LoginPage";
 import { RegisterPage } from "../pages/createAcount/RegisterPage";
 import { Home } from "../pages/Home/Home";
-import { DashboardPage } from "../pages/Dashboard/DashboardPage";
+
 import { Password } from "../pages/rescuePassword/Password";
 import { CreateRechargePage } from "../pages/Recharges/CreateRechargePage";
 import { RechargesListPage } from "../pages/Recharges/RechargesListPage";
@@ -16,6 +16,8 @@ import { AdminDashboard } from "../pages/Admin/AdminDashboard";
 import { AdminUsersPage } from "../pages/Admin/AdminUsersPage";
 import { AdminRechargesPage } from "../pages/Admin/AdminRechargesPage";
 import { AdminTicketsPage } from "../pages/Admin/AdminTicketsPage";
+import { DashboardPage } from "../pages/Dashboard/DashboardPage";
+
 
 export const AppRouter = () => {
   return (
