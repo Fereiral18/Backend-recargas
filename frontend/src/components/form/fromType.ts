@@ -3,6 +3,7 @@ import { ChangeEvent } from "react";
 export interface Config {
  
     labelId: string | undefined;
+    labelText:string
     type?: string;
     value?: string;
     onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
