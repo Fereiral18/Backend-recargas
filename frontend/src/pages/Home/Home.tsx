@@ -912,94 +912,377 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* ========================================================= */}
-      {/* BENEFITS */}
-      {/* ========================================================= */}
+  
+{/* ========================================================= */}
+{/* BENEFITS */}
+{/* ========================================================= */}
 
-      <section className="relative border-y border-white/[0.06] bg-white/[0.018] px-6 py-28 lg:px-8">
+<section
+  className="
+    relative
+    w-full
+    overflow-hidden
+    border-y
+    border-white/[0.06]
+    bg-white/[0.018]
+  "
+>
+  {/* Background glow */}
 
-        <div className="mx-auto max-w-7xl">
+  <div className="pointer-events-none absolute inset-0">
 
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 25,
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0,
-            }}
-            viewport={{
-              once: true,
-            }}
-            className="mx-auto mb-14 max-w-2xl text-center"
+    <div
+      className="
+        absolute
+        -left-40
+        top-10
+        h-80
+        w-80
+        rounded-full
+        bg-cyan-500/[0.06]
+        blur-[100px]
+      "
+    />
+
+    <div
+      className="
+        absolute
+        -right-40
+        bottom-0
+        h-80
+        w-80
+        rounded-full
+        bg-purple-500/[0.06]
+        blur-[100px]
+      "
+    />
+
+  </div>
+
+  {/* ======================================================= */}
+  {/* MAIN CONTAINER */}
+  {/* ======================================================= */}
+
+  <div
+    className="
+      relative
+      mx-auto
+      w-full
+      max-w-7xl
+      min-w-0
+      px-5
+      py-20
+      sm:px-6
+      sm:py-24
+      lg:px-8
+      lg:py-28
+    "
+  >
+
+    {/* ===================================================== */}
+    {/* HEADER */}
+    {/* ===================================================== */}
+
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 25,
+      }}
+      whileInView={{
+        opacity: 1,
+        y: 0,
+      }}
+      viewport={{
+        once: true,
+      }}
+      transition={{
+        duration: 0.6,
+      }}
+      className="
+        mx-auto
+        mb-12
+        w-full
+        max-w-2xl
+        min-w-0
+        text-center
+        sm:mb-14
+      "
+    >
+
+      {/* Eyebrow */}
+
+      <div
+        className="
+          mb-4
+          text-[10px]
+          font-black
+          uppercase
+          tracking-[0.22em]
+          text-purple-400
+          sm:text-xs
+          sm:tracking-[0.25em]
+        "
+      >
+        La diferencia
+      </div>
+
+      {/* Heading */}
+
+      <h2
+        className="
+          break-words
+          text-3xl
+          font-black
+          leading-tight
+          tracking-tight
+          sm:text-4xl
+          lg:text-5xl
+        "
+      >
+        Todo lo que necesitas
+        <br className="hidden sm:block" />
+
+        <span className="text-cyan-400">
+          {" "}en un solo lugar.
+        </span>
+      </h2>
+
+      {/* Description */}
+
+      <p
+        className="
+          mx-auto
+          mt-5
+          max-w-xl
+          text-sm
+          leading-6
+          text-slate-400
+          sm:text-base
+          sm:leading-7
+        "
+      >
+        Diseñamos nuestra plataforma para que recargar sea
+        rápido, sencillo y seguro.
+      </p>
+
+    </motion.div>
+
+    {/* ===================================================== */}
+    {/* BENEFITS GRID */}
+    {/* ===================================================== */}
+
+{/* ========================================================= */}
+{/* BENEFITS GRID */}
+{/* ========================================================= */}
+
+<div
+  className="
+    grid
+    w-full
+    min-w-0
+    grid-cols-1
+    gap-4
+    sm:grid-cols-2
+    sm:gap-5
+    lg:grid-cols-4
+  "
+>
+  {benefits.map((benefit, index) => {
+    const Icon = benefit.icon;
+
+    return (
+      <motion.div
+        key={benefit.title}
+        initial={{
+          opacity: 0,
+          y: 30,
+        }}
+        whileInView={{
+          opacity: 1,
+          y: 0,
+        }}
+        viewport={{
+          once: true,
+          margin: "-50px",
+        }}
+        transition={{
+          duration: 0.5,
+          delay: index * 0.08,
+        }}
+        whileHover={{
+          y: -5,
+        }}
+        className="
+          group
+          relative
+          flex
+          min-h-[220px]
+          w-full
+          min-w-0
+          max-w-full
+          flex-col
+          overflow-hidden
+          rounded-2xl
+          border
+          border-white/10
+          bg-white/[0.035]
+          p-5
+          shadow-xl
+          transition-all
+          duration-300
+          hover:border-cyan-400/20
+          hover:bg-white/[0.06]
+          sm:min-h-[230px]
+          sm:rounded-3xl
+          sm:p-6
+          lg:min-h-[250px]
+          lg:p-7
+        "
+      >
+
+        {/* ================================================= */}
+        {/* CARD GLOW */}
+        {/* ================================================= */}
+
+        <div
+          className="
+            pointer-events-none
+            absolute
+            -right-16
+            -top-16
+            h-32
+            w-32
+            rounded-full
+            bg-cyan-400/[0.04]
+            blur-3xl
+            transition-all
+            duration-500
+            group-hover:bg-cyan-400/[0.08]
+          "
+        />
+
+        {/* ================================================= */}
+        {/* CONTENT */}
+        {/* ================================================= */}
+
+        <div
+          className="
+            relative
+            z-10
+            flex
+            min-w-0
+            flex-1
+            flex-col
+          "
+        >
+
+          {/* ================================================= */}
+          {/* ICON */}
+          {/* ================================================= */}
+
+          <div
+            className="
+              mb-5
+              flex
+              h-11
+              w-11
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              bg-cyan-400/10
+              text-cyan-400
+              transition-all
+              duration-300
+              group-hover:scale-105
+              group-hover:bg-cyan-400/15
+              sm:mb-6
+              sm:h-12
+              sm:w-12
+              sm:rounded-2xl
+            "
           >
+            <Icon
+              size={22}
+              className="sm:h-[23px] sm:w-[23px]"
+            />
+          </div>
 
-            <div className="mb-4 text-xs font-black uppercase tracking-[0.25em] text-purple-400">
-              La diferencia
-            </div>
+          {/* ================================================= */}
+          {/* TEXT */}
+          {/* ================================================= */}
 
-            <h2 className="text-4xl font-black tracking-tight sm:text-5xl">
-              Todo lo que necesitas
-              <span className="text-cyan-400"> en un solo lugar.</span>
-            </h2>
+          <div className="min-w-0 max-w-full">
 
-            <p className="mt-5 leading-7 text-slate-400">
-              Diseñamos nuestra plataforma para que recargar sea
-              rápido, sencillo y seguro.
+            <h3
+              className="
+                m-0
+                max-w-full
+                break-words
+                text-base
+                font-black
+                leading-snug
+                text-white
+                sm:text-lg
+                sm:leading-6
+              "
+            >
+              {benefit.title}
+            </h3>
+
+            <p
+              className="
+                mt-3
+                m-0
+                max-w-full
+                break-words
+                text-sm
+                leading-6
+                text-slate-500
+                sm:mt-3
+              "
+            >
+              {benefit.description}
             </p>
-
-          </motion.div>
-
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-
-            {benefits.map((benefit, index) => {
-
-              const Icon = benefit.icon;
-
-              return (
-                <motion.div
-                  key={benefit.title}
-                  initial={{
-                    opacity: 0,
-                    y: 30,
-                  }}
-                  whileInView={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  viewport={{
-                    once: true,
-                  }}
-                  transition={{
-                    delay: index * 0.1,
-                  }}
-                  whileHover={{
-                    y: -8,
-                  }}
-                  className="group rounded-3xl border border-white/10 bg-white/[0.035] p-7 shadow-xl transition duration-300 hover:border-cyan-400/20 hover:bg-white/[0.06]"
-                >
-
-                  <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-400 transition duration-300 group-hover:scale-110 group-hover:bg-cyan-400/15">
-                    <Icon size={23} />
-                  </div>
-
-                  <h3 className="text-lg font-black">
-                    {benefit.title}
-                  </h3>
-
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    {benefit.description}
-                  </p>
-
-                </motion.div>
-              );
-            })}
 
           </div>
 
         </div>
-      </section>
+
+        {/* ================================================= */}
+        {/* BOTTOM ACCENT */}
+        {/* ================================================= */}
+
+        <div
+          className="
+            absolute
+            bottom-0
+            left-0
+            right-0
+            h-[2px]
+            origin-left
+            scale-x-0
+            bg-gradient-to-r
+            from-cyan-400
+            via-blue-500
+            to-purple-500
+            transition-transform
+            duration-500
+            group-hover:scale-x-100
+          "
+        />
+
+      </motion.div>
+    );
+  })}
+</div>
+
+
+
+  </div>
+
+</section>
+
 
       {/* ========================================================= */}
       {/* HOW IT WORKS */}

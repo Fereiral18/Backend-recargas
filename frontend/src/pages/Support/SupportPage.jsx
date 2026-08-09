@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supportService } from '../../services';
 import { TicketStatusLabels, TicketPriorityLabels } from '../../constants/enums';
 import { toast } from 'react-toastify';
-import './SupportPage.css';
+
 
 export const SupportPage = () => {
   const navigate = useNavigate();
