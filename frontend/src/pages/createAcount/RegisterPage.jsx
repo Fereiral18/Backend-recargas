@@ -1,4 +1,3 @@
-import "./styles.css";
 import { Link } from "react-router-dom";
 
 import RegisterForm  from '../../components/form/RegisterForm';
