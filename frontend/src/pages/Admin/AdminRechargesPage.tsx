@@ -26,6 +26,7 @@ import {
   CircleDollarSign,
   ChevronDown,
   ShieldCheck,
+  User,
 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
