@@ -1,5 +1,5 @@
 export enum UserStatus {
-  ACTIVE = 'ACTIVE',
+  ACTIVE = 'active',
   INACTIVE = 'INACTIVE',
   SUSPENDED = 'SUSPENDED',
   BANNED = 'BANNED',
