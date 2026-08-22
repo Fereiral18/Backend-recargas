@@ -63,8 +63,7 @@ export const DashboardPage = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    authService.logout();
 
     navigate('/login');
   };
