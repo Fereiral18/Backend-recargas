@@ -1,19 +1,25 @@
-import React, { useContext } from "react";
-import { Navigate } from "react-router-dom";
-import { AuthContext } from "./AuthContext/authContext";
+import React, { useContext } from 'react';
+import { Navigate } from 'react-router-dom';
+import { AuthContext } from './AuthContext/authContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requireAdmin = false 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requireAdmin = false,
 }) => {
-  const { isAuthenticated, userInfo } = useContext(AuthContext);
+  const {
+    isAuthenticated,
+    userInfo,
+    checkAuth,
+  } = useContext(AuthContext);
 
-  if (!isAuthenticated) {
+  const hasToken = checkAuth();
+
+  if (!isAuthenticated || !hasToken) {
     return <Navigate to="/login" replace />;
   }
 

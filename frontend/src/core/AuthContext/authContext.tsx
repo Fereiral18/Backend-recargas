@@ -1,4 +1,4 @@
-import { createContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useState, ReactNode, useEffect } from 'react';
 
 interface User {
   uuid: string;
@@ -16,6 +16,7 @@ interface Context {
   setUserInfo: (user: User | null) => void;
   isAuthenticated: boolean;
   logout: () => void;
+  checkAuth: () => boolean;
 }
 
 interface AuthProviderProps {
@@ -24,23 +25,24 @@ interface AuthProviderProps {
 
 export const AuthContext = createContext<Context>({
   userInfo: null,
-  setUserInfo: () => console.log("AuthContext not initialized"),
+  setUserInfo: () => console.log('AuthContext not initialized'),
   isAuthenticated: false,
   logout: () => {},
+  checkAuth: () => false,
 });
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [userInfo, setUserInfoState] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Cargar usuario del localStorage al montar
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userStr = localStorage.getItem('user');
-    
+
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+
         setUserInfoState(user);
         setIsAuthenticated(true);
       } catch (error) {
@@ -50,21 +52,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // Wrapper para setUserInfo que también actualiza isAuthenticated
   const setUserInfo = (user: User | null) => {
     setUserInfoState(user);
     setIsAuthenticated(!!user);
   };
 
+  const checkAuth = (): boolean => {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      setUserInfoState(null);
+      setIsAuthenticated(false);
+      return false;
+    }
+
+    return true;
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+
     setUserInfoState(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ userInfo, setUserInfo, isAuthenticated, logout }}>
+    <AuthContext.Provider
+      value={{
+        userInfo,
+        setUserInfo,
+        isAuthenticated,
+        logout,
+        checkAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
