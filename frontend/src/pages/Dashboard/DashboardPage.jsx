@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-import { userService } from '../../services';
+import { authService, userService } from '../../services';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
