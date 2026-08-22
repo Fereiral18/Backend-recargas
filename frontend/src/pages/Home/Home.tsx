@@ -39,7 +39,7 @@ const games: Game[] = [
     image:
       "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=85",
     color: "from-orange-500/80 via-red-500/30 to-transparent",
-    href: "/recharges/free-fire",
+    href: "/recharges/create",
     badge: "POPULAR",
   },
   {
@@ -48,7 +48,7 @@ const games: Game[] = [
     image:
       "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=85",
     color: "from-blue-500/80 via-purple-500/30 to-transparent",
-    href: "/recharges/mobile-legends",
+    href: "/recharges/create",
     badge: "HOT",
   },
   {
@@ -57,7 +57,7 @@ const games: Game[] = [
     image:
       "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=85",
     color: "from-yellow-500/80 via-orange-500/30 to-transparent",
-    href: "/recharges/pubg-mobile",
+    href: "/recharges/create",
   },
 ];
 
