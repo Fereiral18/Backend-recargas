@@ -3,8 +3,8 @@
  */
 
 export const UserRole = {
-  USER: 'USER',
-  ADMIN: 'ADMIN',
+  USER: 'user',
+  ADMIN: 'admin',
 };
 
 export const UserStatus = {
