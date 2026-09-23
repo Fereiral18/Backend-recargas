@@ -5,11 +5,13 @@ import { AuthContext } from './AuthContext/authContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireReseller?: boolean;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireAdmin = false,
+  requireReseller = false,
 }) => {
   const {
     isAuthenticated,
@@ -23,7 +25,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && userInfo?.role !== 'ADMIN') {
+  if (requireAdmin && userInfo?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireReseller && userInfo?.role !== 'reseller') {
     return <Navigate to="/dashboard" replace />;
   }
 

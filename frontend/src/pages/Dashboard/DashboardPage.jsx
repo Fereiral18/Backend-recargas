@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
@@ -20,7 +20,6 @@ import {
   Sparkles,
   Ticket,
   User,
-  Wallet,
   X,
   Zap,
 } from 'lucide-react';
@@ -30,6 +29,7 @@ import { authService, userService } from '../../services';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
@@ -43,9 +43,23 @@ export const DashboardPage = () => {
   const loadUserData = async () => {
     try {
       const storedUser = localStorage.getItem('user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
 
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      // Este dashboard es el panel del cliente final. Revendedor y admin
+      // tienen el suyo propio — si entran acá (por ej. un link viejo),
+      // los mandamos directo al que les corresponde.
+      if (parsedUser?.role === 'admin') {
+        navigate('/admin', { replace: true });
+        return;
+      }
+
+      if (parsedUser?.role === 'reseller') {
+        navigate('/reseller', { replace: true });
+        return;
+      }
+
+      if (parsedUser) {
+        setUser(parsedUser);
       }
 
       const dashboardResponse = await userService.getDashboard();
@@ -70,18 +84,7 @@ export const DashboardPage = () => {
 
   const firstName = user?.first_name || 'Usuario';
 
-  const balance = Number(user?.balance || 0);
-
   const statsCards = [
-    {
-      label: 'Balance disponible',
-      value: `$${balance.toFixed(2)}`,
-      description: 'Saldo disponible',
-      icon: Wallet,
-      iconClass: 'bg-emerald-500/10 text-emerald-400',
-      valueClass: 'text-emerald-400',
-      href: '/profile',
-    },
     {
       label: 'Recargas',
       value: stats?.total_recharges || 0,
@@ -174,14 +177,6 @@ export const DashboardPage = () => {
     },
   ];
 
-  if (user?.role === 'ADMIN') {
-    navigation.push({
-      label: 'Administración',
-      icon: ShieldCheck,
-      href: '/admin',
-    });
-  }
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -268,7 +263,7 @@ export const DashboardPage = () => {
         `}
       >
         {/* Logo */}
-        <div className="flex h-20 items-center border-b border-white/10 px-6">
+        <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-6">
           <Link
             to="/"
             className="flex items-center gap-3"
@@ -290,7 +285,7 @@ export const DashboardPage = () => {
         </div>
 
         {/* User */}
-        <div className="mx-4 mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <div className="mx-4 mt-4 shrink-0 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 ring-1 ring-violet-500/20">
               <User className="h-5 w-5 text-violet-400" />
@@ -308,8 +303,10 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-6 flex-1 px-4">
+        {/* Navigation -- scroll propio: si la lista de secciones no entra
+            en pantallas bajas (notebooks 1366x768), que se desplace ella
+            sola en vez de apretar o tapar el logout de abajo. */}
+        <nav className="mt-4 flex-1 overflow-y-auto px-4">
           <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
             Menú principal
           </p>
@@ -317,7 +314,7 @@ export const DashboardPage = () => {
           <div className="space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = item.href === '/dashboard';
+              const isActive = location.pathname === item.href;
 
               return (
                 <button
@@ -356,7 +353,7 @@ export const DashboardPage = () => {
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-white/10 p-4">
+        <div className="shrink-0 border-t border-white/10 p-4">
           <div className="mb-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-cyan-500/10 p-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -419,7 +416,7 @@ export const DashboardPage = () => {
             </button>
           </motion.div>
 
-          {/* Balance Hero */}
+          {/* Hero: panel de cliente — pago automático con Mercado Pago */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -438,26 +435,20 @@ export const DashboardPage = () => {
               <div>
                 <div className="mb-3 flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
-                    <Wallet className="h-4 w-4 text-violet-300" />
+                    <Zap className="h-4 w-4 text-violet-300" />
                   </div>
 
                   <span className="text-xs font-medium text-slate-400">
-                    Balance disponible
+                    Pago 100% automático
                   </span>
                 </div>
 
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                    ${balance.toFixed(2)}
-                  </span>
-
-                  <span className="text-sm font-medium text-emerald-400">
-                    USD
-                  </span>
+                <div className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  Pagás con Mercado Pago, recibís al instante
                 </div>
 
-                <p className="mt-3 text-xs text-slate-500">
-                  Disponible para realizar tus próximas recargas.
+                <p className="mt-3 max-w-md text-xs text-slate-500">
+                  No necesitás cargar saldo: cada recarga se paga por separado y se entrega sola apenas se confirma el pago.
                 </p>
               </div>
 

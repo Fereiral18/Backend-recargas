@@ -8,7 +8,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import {
-  ArrowLeft,
   Search,
   Users,
   ShieldCheck,
@@ -32,6 +31,8 @@ import {
   type UserRole,
   type UserStatus,
 } from '../../services/admin.service';
+
+import { AdminLayout } from '../../components/layouts/AdminLayout';
 
 
 export const AdminUsersPage = () => {
@@ -80,7 +81,7 @@ export const AdminUsersPage = () => {
         role?: string;
       };
 
-      if (user.role !== 'ADMIN') {
+      if (user.role !== 'admin') {
         toast.error('No tienes permisos de administrador');
         navigate('/dashboard');
         return;
@@ -147,6 +148,33 @@ export const AdminUsersPage = () => {
       );
 
       toast.error('Error al cambiar el estado');
+    }
+  };
+
+
+  const handleCreditBalance = async (user: AdminUser) => {
+    const amountInput = window.prompt(
+      `Monto a acreditar a ${user.first_name} ${user.last_name} (USD):`
+    );
+
+    if (!amountInput) return;
+
+    const amount = Number.parseFloat(amountInput);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Ingresá un monto válido');
+      return;
+    }
+
+    const note = window.prompt('Nota (opcional) — ej: transferencia recibida por fuera:') || undefined;
+
+    try {
+      await adminUserService.creditBalance(user.uuid, amount, note);
+      toast.success('Saldo acreditado correctamente');
+      await loadUsers();
+    } catch (error: unknown) {
+      console.error('Error al acreditar saldo:', error);
+      toast.error('Error al acreditar saldo');
     }
   };
 
@@ -220,12 +248,21 @@ export const AdminUsersPage = () => {
 
 
   const getRoleConfig = (role: UserRole) => {
-    if (role === 'ADMIN') {
+    if (role === 'admin') {
       return {
         label: 'Administrador',
         className:
           'bg-violet-500/10 text-violet-400 ring-1 ring-violet-500/20',
         icon: ShieldCheck,
+      };
+    }
+
+    if (role === 'reseller') {
+      return {
+        label: 'Revendedor',
+        className:
+          'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20',
+        icon: Wallet,
       };
     }
 
@@ -283,48 +320,11 @@ export const AdminUsersPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-
-      {/* Background decoration */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
-      </div>
-
-
+    <AdminLayout>
       <main className="relative mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
 
         {/* Header */}
         <div className="mb-8">
-
-          <button
-            type="button"
-            onClick={() => navigate('/admin')}
-            className="
-              mb-6
-              inline-flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-white/10
-              bg-white/[0.04]
-              px-4
-              py-2.5
-              text-sm
-              font-medium
-              text-slate-300
-              transition
-              hover:border-white/20
-              hover:bg-white/[0.08]
-              hover:text-white
-            "
-          >
-            <ArrowLeft size={17} />
-
-            Volver al panel
-          </button>
-
 
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
@@ -526,11 +526,15 @@ export const AdminUsersPage = () => {
                   Todos los roles
                 </option>
 
-                <option value="USER">
+                <option value="user">
                   Usuarios
                 </option>
 
-                <option value="ADMIN">
+                <option value="reseller">
+                  Revendedores
+                </option>
+
+                <option value="admin">
                   Administradores
                 </option>
               </select>
@@ -580,7 +584,7 @@ export const AdminUsersPage = () => {
                   Todos los estados
                 </option>
 
-                <option value="ACTIVE">
+                <option value="active">
                   Activos
                 </option>
 
@@ -652,7 +656,7 @@ export const AdminUsersPage = () => {
             bg-white/[0.035]
           ">
 
-            <div className="hidden overflow-x-auto lg:block">
+            <div className="hidden overflow-x-auto 2xl:block">
 
               <div className="min-w-[1100px]">
 
@@ -717,7 +721,7 @@ export const AdminUsersPage = () => {
 
 
             {/* Mobile skeleton */}
-            <div className="space-y-3 p-4 lg:hidden">
+            <div className="space-y-3 p-4 2xl:hidden">
 
               {Array.from({ length: 5 }).map(
                 (_, index) => (
@@ -826,7 +830,7 @@ export const AdminUsersPage = () => {
           ">
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto lg:block">
+            <div className="hidden overflow-x-auto 2xl:block">
 
               <table className="w-full min-w-[1100px]">
 
@@ -1206,11 +1210,15 @@ export const AdminUsersPage = () => {
                                   focus:border-violet-500/50
                                 "
                               >
-                                <option value="USER">
+                                <option value="user">
                                   Usuario
                                 </option>
 
-                                <option value="ADMIN">
+                                <option value="reseller">
+                                  Revendedor
+                                </option>
+
+                                <option value="admin">
                                   Admin
                                 </option>
                               </select>
@@ -1258,7 +1266,7 @@ export const AdminUsersPage = () => {
                                   focus:border-violet-500/50
                                 "
                               >
-                                <option value="ACTIVE">
+                                <option value="active">
                                   Activo
                                 </option>
 
@@ -1289,6 +1297,34 @@ export const AdminUsersPage = () => {
 
                             </div>
 
+                            {user.role === 'reseller' && (
+                              <button
+                                type="button"
+                                onClick={() => handleCreditBalance(user)}
+                                className="
+                                  inline-flex
+                                  h-9
+                                  items-center
+                                  gap-1.5
+                                  rounded-lg
+                                  border
+                                  border-emerald-400/20
+                                  bg-emerald-500/[0.08]
+                                  px-3
+                                  text-xs
+                                  font-semibold
+                                  text-emerald-300
+                                  transition
+                                  hover:border-emerald-400/40
+                                  hover:bg-emerald-500/[0.14]
+                                "
+                                title="Acreditar saldo directo"
+                              >
+                                <Wallet size={13} />
+                                Saldo
+                              </button>
+                            )}
+
                           </div>
 
                         </td>
@@ -1308,7 +1344,7 @@ export const AdminUsersPage = () => {
             <div className="
               space-y-3
               p-3
-              lg:hidden
+              2xl:hidden
             ">
 
               {users.map((user) => {
@@ -1645,11 +1681,15 @@ export const AdminUsersPage = () => {
                             focus:border-violet-500/50
                           "
                         >
-                          <option value="USER">
+                          <option value="user">
                             Cambiar a Usuario
                           </option>
 
-                          <option value="ADMIN">
+                          <option value="reseller">
+                            Cambiar a Revendedor
+                          </option>
+
+                          <option value="admin">
                             Cambiar a Admin
                           </option>
                         </select>
@@ -1697,7 +1737,7 @@ export const AdminUsersPage = () => {
                             focus:border-violet-500/50
                           "
                         >
-                          <option value="ACTIVE">
+                          <option value="active">
                             Activo
                           </option>
 
@@ -1728,6 +1768,35 @@ export const AdminUsersPage = () => {
 
                       </div>
 
+                      {user.role === 'reseller' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCreditBalance(user)}
+                          className="
+                            mt-3
+                            inline-flex
+                            h-10
+                            w-full
+                            items-center
+                            justify-center
+                            gap-1.5
+                            rounded-xl
+                            border
+                            border-emerald-400/20
+                            bg-emerald-500/[0.08]
+                            text-xs
+                            font-semibold
+                            text-emerald-300
+                            transition
+                            hover:border-emerald-400/40
+                            hover:bg-emerald-500/[0.14]
+                          "
+                        >
+                          <Wallet size={14} />
+                          Acreditar saldo
+                        </button>
+                      )}
+
                     </div>
 
                   </article>
@@ -1740,6 +1809,6 @@ export const AdminUsersPage = () => {
         )}
 
       </main>
-    </div>
+    </AdminLayout>
   );
 };

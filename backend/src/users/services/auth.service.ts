@@ -13,6 +13,11 @@ import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UserStatus, UserRole } from '../../common/enums';
 
+// Valid bcrypt hash (cost 10) of a random string no one knows. Compared
+// against when the email doesn't exist, so that path costs the same as a
+// real password check.
+const DUMMY_PASSWORD_HASH = '$2b$10$g4UiCH1TpCvombSeOMZ3VOlSDQrVdxnOCb6qdTjhE1W.rggEzJd.u';
+
 /**
  * Service handling authentication logic
  */
@@ -126,23 +131,21 @@ export class AuthService {
       where: { email: loginDto.email },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    // Check if user is active
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is not active');
-    }
-
-    // Verify password
+    // Always run bcrypt, even for an unknown email, so response time doesn't
+    // reveal which emails are registered.
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
-      user.password_hash,
+      user?.password_hash ?? DUMMY_PASSWORD_HASH,
     );
 
-    if (!isPasswordValid) {
+    if (!user || !isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Only checked after the password: otherwise "Account is not active"
+    // would confirm to anyone that the email exists.
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
     }
 
     // Update last login

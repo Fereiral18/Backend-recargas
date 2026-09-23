@@ -28,7 +28,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-import { rechargeService } from "../../services";
+import { rechargeService, paymentService } from "../../services";
+import { ResellerLayout } from "../../components/layouts/ResellerLayout";
 
 import {
   RechargeStatusLabels,
@@ -44,9 +45,13 @@ import { toast } from "react-toastify";
 export const RechargesListPage = () => {
   const navigate = useNavigate();
 
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isReseller = currentUser?.role === "reseller";
+
   const [recharges, setRecharges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
 
   const [filters, setFilters] = useState({
     status: "",
@@ -74,6 +79,23 @@ export const RechargesListPage = () => {
   useEffect(() => {
     loadRecharges();
   }, [loadRecharges]);
+
+  // Mientras haya recargas en curso (pago confirmándose o procesándose con
+  // el proveedor), refrescamos solas cada pocos segundos para ver el flujo
+  // automático avanzar sin tener que apretar "Actualizar" a mano.
+  useEffect(() => {
+    const hasInFlight = recharges.some(
+      (r) => r.status === "PENDING" || r.status === "PROCESSING"
+    );
+
+    if (!hasInFlight) return;
+
+    const interval = setInterval(() => {
+      loadRecharges();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [recharges, loadRecharges]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -137,10 +159,53 @@ export const RechargesListPage = () => {
     }
   };
 
+  // Retoma el pago de una recarga PENDING sin pagar (el cliente cerró el
+  // checkout de Mercado Pago sin aprobar ni rechazar) generando una nueva
+  // preferencia para el mismo pedido, igual que al crearla.
+  const handlePayNow = async (uuid) => {
+    setPayingId(uuid);
+
+    try {
+      const preference = await paymentService.createMercadoPagoPreference(uuid);
+
+      window.location.href = preference.data.init_point;
+    } catch (error) {
+      console.error("Error al generar el pago:", error);
+
+      toast.error(
+        error.response?.data?.message ||
+          "No pudimos iniciar el pago"
+      );
+
+      setPayingId(null);
+    }
+  };
+
+  // Manda a Soporte con los datos ya cargados para no obligar al usuario a
+  // volver a explicar de qué recarga se trata.
+  const handleReportIssue = (recharge) => {
+    navigate("/support", {
+      state: {
+        prefill: {
+          subject: `Problema con mi recarga ${recharge.reference}`,
+          category: "recarga",
+          recharge_id: recharge.uuid,
+          description: `Recarga ${recharge.reference} (${
+            GameOperatorLabels[recharge.operator] || recharge.operator
+          }${recharge.package ? " - " + recharge.package : ""}), estado actual: ${
+            RechargeStatusLabels[recharge.status] || recharge.status
+          }.\n\nDescribí acá el problema: `,
+        },
+      },
+    });
+  };
+
   const getStatusClass = (status) => {
     const classes = {
       PENDING:
         "border-amber-400/20 bg-amber-400/10 text-amber-300",
+      PROCESSING:
+        "border-cyan-400/20 bg-cyan-400/10 text-cyan-300",
       COMPLETED:
         "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
       FAILED:
@@ -158,6 +223,7 @@ export const RechargesListPage = () => {
   const getStatusIcon = (status) => {
     const icons = {
       PENDING: <Clock3 size={13} />,
+      PROCESSING: <Loader2 size={13} className="animate-spin" />,
       COMPLETED: <CheckCircle2 size={13} />,
       FAILED: <XCircle size={13} />,
       CANCELLED: <AlertCircle size={13} />,
@@ -186,6 +252,7 @@ export const RechargesListPage = () => {
     if (filters.status) {
       const statusLabel = {
         PENDING: "pendientes",
+        PROCESSING: "en proceso",
         COMPLETED: "completadas",
         FAILED: "fallidas",
         CANCELLED: "canceladas",
@@ -207,29 +274,8 @@ export const RechargesListPage = () => {
     }
   };
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07070d] text-white">
-      {/* =====================================================
-          BACKGROUND
-      ====================================================== */}
-
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[120px]" />
-
-        <div className="absolute right-[-180px] top-[10%] h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[130px]" />
-
-        <div className="absolute bottom-[-220px] left-[35%] h-[500px] w-[500px] rounded-full bg-fuchsia-600/10 blur-[150px]" />
-
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
-      </div>
-
+  const content = (
+    <>
       <div className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         {/* =====================================================
             HEADER
@@ -302,34 +348,36 @@ export const RechargesListPage = () => {
                 />
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-2xl
-                  border
-                  border-white/10
-                  bg-white/[0.04]
-                  px-4
-                  py-3.5
-                  text-sm
-                  font-semibold
-                  text-white/60
-                  backdrop-blur-xl
-                  transition
-                  hover:border-white/20
-                  hover:bg-white/[0.08]
-                  hover:text-white
-                "
-              >
-                <ArrowLeft size={17} />
-                <span className="hidden sm:inline">
-                  Volver
-                </span>
-              </button>
+              {!isReseller && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/dashboard")}
+                  className="
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-white/[0.04]
+                    px-4
+                    py-3.5
+                    text-sm
+                    font-semibold
+                    text-white/60
+                    backdrop-blur-xl
+                    transition
+                    hover:border-white/20
+                    hover:bg-white/[0.08]
+                    hover:text-white
+                  "
+                >
+                  <ArrowLeft size={17} />
+                  <span className="hidden sm:inline">
+                    Volver
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </motion.header>
@@ -392,6 +440,10 @@ export const RechargesListPage = () => {
 
                 <option value="PENDING">
                   Pendiente
+                </option>
+
+                <option value="PROCESSING">
+                  En proceso
                 </option>
 
                 <option value="COMPLETED">
@@ -585,6 +637,9 @@ export const RechargesListPage = () => {
                   const canBeCancelled =
                     canCancel(recharge);
 
+                  const canPayNow =
+                    isPending && !recharge.paid_from_balance;
+
                   return (
                     <motion.article
                       key={recharge.uuid}
@@ -751,7 +806,7 @@ export const RechargesListPage = () => {
                             label="Monto"
                             value={`$${parseFloat(
                               recharge.amount
-                            ).toFixed(2)}`}
+                            ).toFixed(2)} ${recharge.currency || ""}`}
                             highlight
                           />
 
@@ -802,7 +857,8 @@ export const RechargesListPage = () => {
 
                         {/* Actions */}
                         {(recharge.proof_image_path ||
-                          canBeCancelled) && (
+                          canBeCancelled ||
+                          canPayNow) && (
                           <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
                             {recharge.proof_image_path ? (
                               <button
@@ -866,18 +922,71 @@ export const RechargesListPage = () => {
                               <div />
                             )}
 
-                            {canBeCancelled && (
+                            {(canPayNow || canBeCancelled) && (
                               <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-                                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300/60">
-                                  <Timer size={13} />
-                                  Puedes cancelar durante los
-                                  próximos{" "}
-                                  {getMinutesLeft(
-                                    recharge
-                                  )}{" "}
-                                  min
-                                </div>
+                                {canPayNow && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handlePayNow(recharge.uuid)
+                                    }
+                                    disabled={
+                                      payingId === recharge.uuid
+                                    }
+                                    className="
+                                      inline-flex
+                                      w-full
+                                      items-center
+                                      justify-center
+                                      gap-2
+                                      rounded-xl
+                                      bg-gradient-to-r
+                                      from-emerald-600
+                                      to-cyan-600
+                                      px-4
+                                      py-3
+                                      text-xs
+                                      font-bold
+                                      text-white
+                                      shadow-lg
+                                      shadow-emerald-600/20
+                                      transition
+                                      hover:-translate-y-0.5
+                                      disabled:cursor-not-allowed
+                                      disabled:opacity-40
+                                      sm:w-auto
+                                    "
+                                  >
+                                    {payingId === recharge.uuid ? (
+                                      <>
+                                        <Loader2
+                                          size={15}
+                                          className="animate-spin"
+                                        />
+                                        Redirigiendo...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Wallet size={15} />
+                                        Pagar ahora
+                                      </>
+                                    )}
+                                  </button>
+                                )}
 
+                                {canBeCancelled && (
+                                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300/60">
+                                    <Timer size={13} />
+                                    Puedes cancelar durante los
+                                    próximos{" "}
+                                    {getMinutesLeft(
+                                      recharge
+                                    )}{" "}
+                                    min
+                                  </div>
+                                )}
+
+                                {canBeCancelled && (
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -930,14 +1039,47 @@ export const RechargesListPage = () => {
                                     </>
                                   )}
                                 </button>
+                                )}
                               </div>
                             )}
                           </div>
                         )}
 
+                        {/* Reportar un problema: siempre disponible, no
+                            depende del estado de la recarga */}
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleReportIssue(recharge)}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-300"
+                          >
+                            <AlertCircle size={13} />
+                            Reportar un problema
+                          </button>
+                        </div>
+
                         {/* Pending notice */}
                         {isPending &&
-                          !canBeCancelled && (
+                          !canBeCancelled &&
+                          (recharge.paid_from_balance ? (
+                            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4">
+                              <Clock3
+                                size={17}
+                                className="mt-0.5 shrink-0 text-emerald-300/70"
+                              />
+
+                              <div>
+                                <p className="text-xs font-bold text-emerald-200/80">
+                                  Ya se descontó de tu balance
+                                </p>
+
+                                <p className="mt-1 text-xs leading-5 text-white/30">
+                                  Esta recarga ya está pagada. Queda
+                                  pendiente de que el equipo la entregue.
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
                             <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-400/10 bg-amber-400/[0.04] p-4">
                               <Clock3
                                 size={17}
@@ -946,17 +1088,39 @@ export const RechargesListPage = () => {
 
                               <div>
                                 <p className="text-xs font-bold text-amber-200/80">
-                                  Recarga en proceso
+                                  Esperando el pago
                                 </p>
 
                                 <p className="mt-1 text-xs leading-5 text-white/30">
-                                  Tu recarga está siendo
-                                  verificada. Te avisaremos
-                                  cuando el proceso finalice.
+                                  Todavía no confirmamos tu pago
+                                  con Mercado Pago.
                                 </p>
                               </div>
                             </div>
-                          )}
+                          ))}
+
+                        {/* Processing notice */}
+                        {recharge.status === "PROCESSING" && (
+                          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4">
+                            <Loader2
+                              size={17}
+                              className="mt-0.5 shrink-0 animate-spin text-cyan-300/70"
+                            />
+
+                            <div>
+                              <p className="text-xs font-bold text-cyan-200/80">
+                                Pago confirmado, entregando tu recarga
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-white/30">
+                                Ya cobramos tu pago. Estamos
+                                procesando la entrega con el
+                                proveedor, esto se actualiza
+                                solo en unos segundos.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.article>
                   );
@@ -991,6 +1155,30 @@ export const RechargesListPage = () => {
           </motion.div>
         )}
       </div>
+    </>
+  );
+
+  if (isReseller) {
+    return <ResellerLayout>{content}</ResellerLayout>;
+  }
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[#07070d] text-white">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[120px]" />
+        <div className="absolute right-[-180px] top-[10%] h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[130px]" />
+        <div className="absolute bottom-[-220px] left-[35%] h-[500px] w-[500px] rounded-full bg-fuchsia-600/10 blur-[150px]" />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+      </div>
+
+      {content}
     </main>
   );
 };

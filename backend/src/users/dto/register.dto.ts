@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
+import { IsEmail, IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 
 /**
  * DTO for user registration
@@ -39,9 +39,11 @@ export class RegisterDto {
 
   @ApiProperty({
     example: 'password123',
-    description: 'User password',
+    description: 'User password (8-72 characters)',
   })
   @IsString()
-  @MinLength(6)
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  // bcrypt only uses the first 72 bytes: anything past that is silently ignored.
+  @MaxLength(72, { message: 'La contraseña no puede superar los 72 caracteres' })
   password: string;
 }

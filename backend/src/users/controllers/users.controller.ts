@@ -2,7 +2,9 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Body,
+  Param,
   UseGuards,
   Request,
   Query,
@@ -16,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { CreditBalanceDto } from '../dto/credit-balance.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { UserRole } from '../../common/enums';
@@ -110,15 +113,63 @@ export class UsersController {
     @Request() req: AuthenticatedRequest,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    // Users can't change their own role or status
+    // Users can't change their own role, status, balance or reseller tier
     delete updateUserDto.role;
     delete updateUserDto.status;
     delete updateUserDto.balance;
+    delete updateUserDto.tier_id;
 
     const user = await this.usersService.update(req.user.uuid, updateUserDto);
 
     return {
       message: 'Profile updated successfully',
+      data: user,
+    };
+  }
+
+  // Rutas con :uuid van al final: en Nest/Express matchean por orden de
+  // declaración, así que si fueran antes de 'me'/'stats'/'dashboard'
+  // interceptarían esas rutas literales tratando el literal como uuid.
+  @Patch(':uuid')
+  @ApiOperation({ summary: "Update a user's role, status or reseller tier (admin only)" })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  async updateAsAdmin(
+    @Request() req: AuthenticatedRequest,
+    @Param('uuid') uuid: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Solo administradores pueden editar otros usuarios');
+    }
+
+    const user = await this.usersService.updateAsAdmin(uuid, updateUserDto);
+
+    return {
+      message: 'User updated successfully',
+      data: user,
+    };
+  }
+
+  @Post(':uuid/balance/credit')
+  @ApiOperation({ summary: "Credit a reseller's prepaid balance (admin only)" })
+  @ApiResponse({ status: 200, description: 'Balance credited successfully' })
+  async creditBalance(
+    @Request() req: AuthenticatedRequest,
+    @Param('uuid') uuid: string,
+    @Body() creditBalanceDto: CreditBalanceDto,
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Solo administradores pueden acreditar saldo');
+    }
+
+    const user = await this.usersService.creditBalance(
+      uuid,
+      creditBalanceDto.amount,
+      creditBalanceDto.note,
+    );
+
+    return {
+      message: 'Balance credited successfully',
       data: user,
     };
   }

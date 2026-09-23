@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   Search,
   Filter,
   RefreshCw,
@@ -25,11 +24,14 @@ import {
 } from "lucide-react";
 
 import { adminSupportService } from "../../services/admin.service";
+import { supportService } from "../../services";
+import type { TicketMessage } from "../../services/types";
 import {
   TicketStatusLabels,
   TicketPriorityLabels,
 } from "../../constants/enums";
 import { toast } from "react-toastify";
+import { AdminLayout } from "../../components/layouts/AdminLayout";
 
 interface UserData {
   uuid?: string;
@@ -49,6 +51,13 @@ interface TicketData {
   assigned_to?: string | null;
   user?: UserData;
   assigned_to_user?: UserData | null;
+  recharge?: {
+    uuid: string;
+    reference: string;
+    operator: string;
+    package?: string | null;
+    status: string;
+  } | null;
 }
 
 interface Filters {
@@ -75,6 +84,8 @@ export const AdminTicketsPage = () => {
 
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
+  const [messages, setMessages] = useState<TicketMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -106,7 +117,7 @@ export const AdminTicketsPage = () => {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
 
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "admin") {
       toast.error("No tienes permisos de administrador");
       navigate("/dashboard");
       return;
@@ -126,9 +137,25 @@ export const AdminTicketsPage = () => {
     }));
   };
 
+  const loadMessages = async (ticketUuid: string) => {
+    setLoadingMessages(true);
+
+    try {
+      const response = await supportService.getMessages(ticketUuid);
+      setMessages((response as any).data ?? (response as any) ?? []);
+    } catch (error) {
+      console.error("Error al cargar mensajes:", error);
+      toast.error("No pudimos cargar el historial del ticket");
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   const handleViewTicket = (ticket: TicketData) => {
     setSelectedTicket(ticket);
+    setMessages([]);
     setShowModal(true);
+    loadMessages(ticket.uuid);
   };
 
   const handleUpdateStatus = async (
@@ -194,6 +221,8 @@ export const AdminTicketsPage = () => {
       toast.success("Respuesta enviada");
 
       setReplyMessage("");
+
+      await loadMessages(selectedTicket.uuid);
     } catch (error) {
       console.error("Error al enviar respuesta:", error);
       toast.error("Error al enviar la respuesta");
@@ -210,22 +239,22 @@ export const AdminTicketsPage = () => {
     > = {
       OPEN: {
         badge:
-          "bg-emerald-50 text-emerald-700 ring-emerald-200",
+          "bg-emerald-500/10 text-emerald-300 ring-emerald-500/20",
         icon: <Inbox size={14} />,
       },
       IN_PROGRESS: {
         badge:
-          "bg-blue-50 text-blue-700 ring-blue-200",
+          "bg-blue-500/10 text-blue-300 ring-blue-500/20",
         icon: <Clock3 size={14} />,
       },
       RESOLVED: {
         badge:
-          "bg-violet-50 text-violet-700 ring-violet-200",
+          "bg-violet-500/10 text-violet-300 ring-violet-500/20",
         icon: <CheckCircle2 size={14} />,
       },
       CLOSED: {
         badge:
-          "bg-slate-100 text-slate-600 ring-slate-200",
+          "bg-white/5 text-slate-400 ring-white/10",
         icon: <CheckCircle2 size={14} />,
       },
     };
@@ -233,7 +262,7 @@ export const AdminTicketsPage = () => {
     return (
       styles[status] || {
         badge:
-          "bg-slate-100 text-slate-600 ring-slate-200",
+          "bg-white/5 text-slate-400 ring-white/10",
         icon: <Ticket size={14} />,
       }
     );
@@ -241,18 +270,18 @@ export const AdminTicketsPage = () => {
 
   const getPriorityStyles = (priority: string) => {
     const styles: Record<string, string> = {
-      LOW: "bg-slate-100 text-slate-600 ring-slate-200",
+      LOW: "bg-white/5 text-slate-400 ring-white/10",
       MEDIUM:
-        "bg-amber-50 text-amber-700 ring-amber-200",
+        "bg-amber-500/10 text-amber-300 ring-amber-500/20",
       HIGH:
-        "bg-orange-50 text-orange-700 ring-orange-200",
+        "bg-orange-500/10 text-orange-300 ring-orange-500/20",
       URGENT:
-        "bg-red-50 text-red-700 ring-red-200",
+        "bg-red-500/10 text-red-300 ring-red-500/20",
     };
 
     return (
       styles[priority] ||
-      "bg-slate-100 text-slate-600 ring-slate-200"
+      "bg-white/5 text-slate-400 ring-white/10"
     );
   };
 
@@ -278,13 +307,7 @@ export const AdminTicketsPage = () => {
   ).length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Background decoration */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-200/20 blur-3xl" />
-        <div className="absolute right-0 top-1/3 h-96 w-96 rounded-full bg-violet-200/20 blur-3xl" />
-      </div>
-
+    <AdminLayout>
       <main className="relative mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {/* HEADER */}
         <motion.div
@@ -294,21 +317,13 @@ export const AdminTicketsPage = () => {
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <button
-                onClick={() => navigate("/admin")}
-                className="mb-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-              >
-                <ArrowLeft size={17} />
-                Volver al panel
-              </button>
-
               <div className="flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/20">
                   <MessageSquare size={27} />
                 </div>
 
                 <div>
-                  <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
                     Gestión de Tickets
                   </h1>
 
@@ -319,17 +334,19 @@ export const AdminTicketsPage = () => {
               </div>
             </div>
 
-            <button
-              onClick={loadTickets}
-              disabled={isLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw
-                size={17}
-                className={isLoading ? "animate-spin" : ""}
-              />
-              Actualizar
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={loadTickets}
+                disabled={isLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-bold text-slate-300 transition hover:border-blue-400/40 hover:bg-white/[0.08] hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw
+                  size={17}
+                  className={isLoading ? "animate-spin" : ""}
+                />
+                Actualizar
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -341,28 +358,28 @@ export const AdminTicketsPage = () => {
               value: totalTickets,
               icon: Ticket,
               iconClass:
-                "bg-blue-50 text-blue-600",
+                "bg-blue-500/10 text-blue-400",
             },
             {
               label: "Tickets abiertos",
               value: openTickets,
               icon: Inbox,
               iconClass:
-                "bg-emerald-50 text-emerald-600",
+                "bg-emerald-500/10 text-emerald-400",
             },
             {
               label: "En progreso",
               value: progressTickets,
               icon: Clock3,
               iconClass:
-                "bg-violet-50 text-violet-600",
+                "bg-violet-500/10 text-violet-400",
             },
             {
               label: "Prioridad urgente",
               value: urgentTickets,
               icon: AlertTriangle,
               iconClass:
-                "bg-red-50 text-red-600",
+                "bg-red-500/10 text-red-400",
             },
           ].map((stat, index) => {
             const Icon = stat.icon;
@@ -373,7 +390,7 @@ export const AdminTicketsPage = () => {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06 }}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.055]"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -381,7 +398,7 @@ export const AdminTicketsPage = () => {
                       {stat.label}
                     </p>
 
-                    <p className="mt-2 text-3xl font-black text-slate-900">
+                    <p className="mt-2 text-3xl font-black text-white">
                       {stat.value}
                     </p>
                   </div>
@@ -402,12 +419,12 @@ export const AdminTicketsPage = () => {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+          className="mb-6 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5"
         >
           <div className="mb-4 flex items-center gap-2">
-            <Filter size={18} className="text-blue-600" />
+            <Filter size={18} className="text-blue-400" />
 
-            <h2 className="font-bold text-slate-900">
+            <h2 className="font-bold text-white">
               Filtros y búsqueda
             </h2>
           </div>
@@ -417,7 +434,7 @@ export const AdminTicketsPage = () => {
             <div className="relative">
               <Search
                 size={19}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
               />
 
               <input
@@ -427,7 +444,7 @@ export const AdminTicketsPage = () => {
                 onChange={(e) =>
                   setSearchTerm(e.target.value)
                 }
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/20 pl-11 pr-4 text-sm font-medium text-white outline-none transition placeholder:text-white/20 focus:border-blue-400/50 focus:bg-blue-500/[0.04] focus:ring-4 focus:ring-blue-500/10"
               />
             </div>
 
@@ -437,7 +454,7 @@ export const AdminTicketsPage = () => {
                 name="status"
                 value={filters.status}
                 onChange={handleFilterChange}
-                className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                className="h-12 w-full appearance-none rounded-xl border border-white/10 bg-slate-950 px-4 pr-10 text-sm font-semibold text-slate-300 outline-none transition hover:border-white/20 focus:border-blue-400/50 focus:ring-4 focus:ring-blue-500/10"
               >
                 <option value="">
                   Todos los estados
@@ -455,7 +472,7 @@ export const AdminTicketsPage = () => {
 
               <ChevronDown
                 size={17}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
               />
             </div>
 
@@ -465,7 +482,7 @@ export const AdminTicketsPage = () => {
                 name="priority"
                 value={filters.priority}
                 onChange={handleFilterChange}
-                className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                className="h-12 w-full appearance-none rounded-xl border border-white/10 bg-slate-950 px-4 pr-10 text-sm font-semibold text-slate-300 outline-none transition hover:border-white/20 focus:border-blue-400/50 focus:ring-4 focus:ring-blue-500/10"
               >
                 <option value="">
                   Todas las prioridades
@@ -483,7 +500,7 @@ export const AdminTicketsPage = () => {
 
               <ChevronDown
                 size={17}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
               />
             </div>
           </div>
@@ -494,18 +511,18 @@ export const AdminTicketsPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]"
         >
           {isLoading ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center px-6">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10">
                 <Loader2
                   size={28}
-                  className="animate-spin text-blue-600"
+                  className="animate-spin text-blue-400"
                 />
               </div>
 
-              <p className="font-bold text-slate-800">
+              <p className="font-bold text-white">
                 Cargando tickets...
               </p>
 
@@ -515,11 +532,11 @@ export const AdminTicketsPage = () => {
             </div>
           ) : tickets.length === 0 ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
                 <Inbox size={30} />
               </div>
 
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-lg font-bold text-white">
                 No hay tickets
               </h3>
 
@@ -529,10 +546,10 @@ export const AdminTicketsPage = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto 2xl:block">
               <table className="w-full min-w-[1100px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80">
+                  <tr className="border-b border-white/10 bg-white/[0.02]">
                     <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">
                       Usuario
                     </th>
@@ -567,7 +584,7 @@ export const AdminTicketsPage = () => {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/5">
                   {tickets.map((ticket, index) => {
                     const statusStyles =
                       getStatusStyles(ticket.status);
@@ -586,7 +603,7 @@ export const AdminTicketsPage = () => {
                         transition={{
                           delay: index * 0.025,
                         }}
-                        className="group transition hover:bg-slate-50/80"
+                        className="group transition hover:bg-white/[0.03]"
                       >
                         {/* USER */}
                         <td className="px-5 py-4">
@@ -596,12 +613,12 @@ export const AdminTicketsPage = () => {
                             </div>
 
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-slate-800">
+                              <p className="truncate text-sm font-bold text-white">
                                 {ticket.user?.first_name}{" "}
                                 {ticket.user?.last_name}
                               </p>
 
-                              <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                              <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                                 <Mail size={11} />
 
                                 <span className="max-w-[170px] truncate">
@@ -614,18 +631,24 @@ export const AdminTicketsPage = () => {
 
                         {/* SUBJECT */}
                         <td className="max-w-[250px] px-5 py-4">
-                          <p className="truncate text-sm font-bold text-slate-800">
+                          <p className="truncate text-sm font-bold text-white">
                             {ticket.subject}
                           </p>
 
-                          <p className="mt-1 font-mono text-[10px] text-slate-400">
+                          <p className="mt-1 font-mono text-[10px] text-slate-600">
                             #{ticket.uuid.slice(0, 8)}
                           </p>
+
+                          {ticket.recharge && (
+                            <p className="mt-1 inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-300">
+                              Recarga {ticket.recharge.reference}
+                            </p>
+                          )}
                         </td>
 
                         {/* CATEGORY */}
                         <td className="px-5 py-4">
-                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300">
                             <Tag size={12} />
                             {ticket.category}
                           </span>
@@ -665,11 +688,11 @@ export const AdminTicketsPage = () => {
                         <td className="px-5 py-4">
                           {ticket.assigned_to_user ? (
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
                                 <User size={15} />
                               </div>
 
-                              <span className="max-w-[130px] truncate text-xs font-bold text-slate-700">
+                              <span className="max-w-[130px] truncate text-xs font-bold text-slate-300">
                                 {
                                   ticket
                                     .assigned_to_user
@@ -683,7 +706,7 @@ export const AdminTicketsPage = () => {
                               </span>
                             </div>
                           ) : (
-                            <span className="text-xs font-semibold text-slate-400">
+                            <span className="text-xs font-semibold text-slate-600">
                               Sin asignar
                             </span>
                           )}
@@ -708,7 +731,7 @@ export const AdminTicketsPage = () => {
                                 handleViewTicket(ticket)
                               }
                               title="Ver ticket"
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-400"
                             >
                               <Eye size={16} />
                             </button>
@@ -721,7 +744,7 @@ export const AdminTicketsPage = () => {
                                   )
                                 }
                                 title="Asignarme ticket"
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-400"
                               >
                                 <UserPlus size={16} />
                               </button>
@@ -737,7 +760,7 @@ export const AdminTicketsPage = () => {
                                   )
                                 }
                                 title="Cambiar estado"
-                                className="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-xs font-bold text-slate-600 outline-none transition hover:border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                                className="h-9 appearance-none rounded-lg border border-white/10 bg-slate-950 pl-3 pr-8 text-xs font-bold text-slate-300 outline-none transition hover:border-white/20 focus:border-blue-400/50 focus:ring-2 focus:ring-blue-500/10"
                               >
                                 {STATUS_OPTIONS.map(
                                   (option) => (
@@ -753,7 +776,7 @@ export const AdminTicketsPage = () => {
 
                               <ChevronDown
                                 size={13}
-                                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500"
                               />
                             </div>
                           </div>
@@ -763,6 +786,148 @@ export const AdminTicketsPage = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* MOBILE CARDS */}
+          {tickets.length > 0 && (
+            <div className="space-y-3 p-3 2xl:hidden">
+              {tickets.map((ticket) => {
+                const statusStyles = getStatusStyles(ticket.status);
+
+                return (
+                  <article
+                    key={ticket.uuid}
+                    className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-black text-white shadow-sm">
+                          {getInitials(ticket)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">
+                            {ticket.user?.first_name} {ticket.user?.last_name}
+                          </p>
+
+                          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
+                            <Mail size={11} className="shrink-0" />
+                            {ticket.user?.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black ring-1 ring-inset ${statusStyles.badge}`}
+                      >
+                        {statusStyles.icon}
+                        {TicketStatusLabels[ticket.status]}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                      <p className="truncate text-sm font-bold text-white">{ticket.subject}</p>
+                      <p className="mt-1 font-mono text-[10px] text-slate-600">
+                        #{ticket.uuid.slice(0, 8)}
+                      </p>
+
+                      {ticket.recharge && (
+                        <p className="mt-1.5 inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-300">
+                          Recarga {ticket.recharge.reference}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                          Categoría
+                        </p>
+                        <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                          <Tag size={12} />
+                          {ticket.category}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                          Prioridad
+                        </p>
+                        <span
+                          className={`mt-1.5 inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ring-1 ring-inset ${getPriorityStyles(
+                            ticket.priority
+                          )}`}
+                        >
+                          {TicketPriorityLabels[ticket.priority]}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                          Asignado
+                        </p>
+                        {ticket.assigned_to_user ? (
+                          <p className="mt-1.5 truncate text-xs font-bold text-slate-300">
+                            {ticket.assigned_to_user.first_name} {ticket.assigned_to_user.last_name}
+                          </p>
+                        ) : (
+                          <p className="mt-1.5 text-xs font-semibold text-slate-600">Sin asignar</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                          Fecha
+                        </p>
+                        <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                          <CalendarDays size={13} />
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button
+                        onClick={() => handleViewTicket(ticket)}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-bold text-slate-300 transition hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-400"
+                      >
+                        <Eye size={15} />
+                        Ver ticket
+                      </button>
+
+                      {!ticket.assigned_to && (
+                        <button
+                          onClick={() => handleAssignTicket(ticket.uuid)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-bold text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-400"
+                        >
+                          <UserPlus size={15} />
+                          Asignarme
+                        </button>
+                      )}
+
+                      <div className="relative col-span-1 sm:col-span-2">
+                        <select
+                          value={ticket.status}
+                          onChange={(e) => handleUpdateStatus(ticket.uuid, e.target.value)}
+                          className="h-10 w-full appearance-none rounded-xl border border-white/10 bg-slate-950 pl-3 pr-9 text-xs font-bold text-slate-300 outline-none transition hover:border-white/20 focus:border-blue-400/50"
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              Cambiar a: {option.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <ChevronDown
+                          size={14}
+                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -775,7 +940,7 @@ export const AdminTicketsPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div
@@ -800,7 +965,7 @@ export const AdminTicketsPage = () => {
                 damping: 28,
               }}
               onClick={(e) => e.stopPropagation()}
-              className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+              className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl"
             >
               {/* MODAL HEADER */}
               <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 px-6 py-6 text-white sm:px-8">
@@ -820,6 +985,15 @@ export const AdminTicketsPage = () => {
                     <p className="mt-2 font-mono text-xs text-slate-400">
                       ID: {selectedTicket.uuid}
                     </p>
+
+                    {selectedTicket.recharge && (
+                      <button
+                        onClick={() => navigate('/admin/recharges')}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-blue-100 ring-1 ring-white/10 transition hover:bg-white/20"
+                      >
+                        Recarga vinculada: {selectedTicket.recharge.reference}
+                      </button>
+                    )}
                   </div>
 
                   <button
@@ -834,14 +1008,14 @@ export const AdminTicketsPage = () => {
               <div className="max-h-[calc(92vh-150px)] overflow-y-auto">
                 <div className="space-y-6 p-5 sm:p-8">
                   {/* USER CARD */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 font-black text-white">
                         {getInitials(selectedTicket)}
                       </div>
 
                       <div>
-                        <p className="font-bold text-slate-900">
+                        <p className="font-bold text-white">
                           {
                             selectedTicket.user
                               ?.first_name
@@ -852,7 +1026,7 @@ export const AdminTicketsPage = () => {
                           }
                         </p>
 
-                        <p className="flex items-center gap-1.5 text-sm text-slate-500">
+                        <p className="flex items-center gap-1.5 text-sm text-slate-400">
                           <Mail size={13} />
 
                           {
@@ -871,18 +1045,18 @@ export const AdminTicketsPage = () => {
                     </h3>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl border border-slate-200 p-4">
-                        <p className="text-xs font-semibold text-slate-400">
+                      <div className="rounded-xl border border-white/10 p-4">
+                        <p className="text-xs font-semibold text-slate-500">
                           Categoría
                         </p>
 
-                        <p className="mt-1 font-bold text-slate-800">
+                        <p className="mt-1 font-bold text-white">
                           {selectedTicket.category}
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 p-4">
-                        <p className="text-xs font-semibold text-slate-400">
+                      <div className="rounded-xl border border-white/10 p-4">
+                        <p className="text-xs font-semibold text-slate-500">
                           Prioridad
                         </p>
 
@@ -899,8 +1073,8 @@ export const AdminTicketsPage = () => {
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 p-4">
-                        <p className="text-xs font-semibold text-slate-400">
+                      <div className="rounded-xl border border-white/10 p-4">
+                        <p className="text-xs font-semibold text-slate-500">
                           Estado
                         </p>
 
@@ -933,11 +1107,71 @@ export const AdminTicketsPage = () => {
                       Descripción
                     </h3>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-300">
                         {selectedTicket.description}
                       </p>
                     </div>
+                  </div>
+
+                  {/* CONVERSATION */}
+                  <div>
+                    <h3 className="mb-3 text-sm font-black uppercase tracking-wide text-slate-500">
+                      Conversación
+                    </h3>
+
+                    {loadingMessages ? (
+                      <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-sm text-slate-500">
+                        <Loader2 size={16} className="animate-spin" />
+                        Cargando historial...
+                      </div>
+                    ) : messages.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center text-sm text-slate-500">
+                        Todavía no hay mensajes en este ticket.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.map((msg) => {
+                          const isAdminMsg =
+                            msg.type === "ADMIN_RESPONSE" ||
+                            msg.user?.role === "admin";
+
+                          return (
+                            <div
+                              key={msg.uuid}
+                              className={`flex ${isAdminMsg ? "justify-end" : "justify-start"}`}
+                            >
+                              <div
+                                className={`max-w-[80%] rounded-2xl border px-4 py-3 ${
+                                  isAdminMsg
+                                    ? "border-emerald-400/20 bg-emerald-500/[0.08]"
+                                    : "border-white/10 bg-white/[0.04]"
+                                }`}
+                              >
+                                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                  <User size={11} />
+                                  {isAdminMsg
+                                    ? "Soporte"
+                                    : `${msg.user?.first_name || "Usuario"} ${msg.user?.last_name || ""}`.trim()}
+                                </div>
+
+                                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">
+                                  {msg.message}
+                                </p>
+
+                                {(msg.created_at || msg.createdAt) && (
+                                  <p className="mt-1.5 text-[10px] text-slate-600">
+                                    {new Date(
+                                      msg.created_at || msg.createdAt || ""
+                                    ).toLocaleString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* REPLY */}
@@ -945,17 +1179,17 @@ export const AdminTicketsPage = () => {
                     <div className="mb-3 flex items-center gap-2">
                       <MessageSquare
                         size={18}
-                        className="text-blue-600"
+                        className="text-blue-400"
                       />
 
-                      <h3 className="text-lg font-black text-slate-900">
+                      <h3 className="text-lg font-black text-white">
                         Responder al usuario
                       </h3>
                     </div>
 
                     <form
                       onSubmit={handleReply}
-                      className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 sm:p-5"
+                      className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-4 sm:p-5"
                     >
                       <textarea
                         value={replyMessage}
@@ -965,7 +1199,7 @@ export const AdminTicketsPage = () => {
                         placeholder="Escribe una respuesta clara y profesional..."
                         rows={5}
                         required
-                        className="w-full resize-none rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                        className="w-full resize-none rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white outline-none transition placeholder:text-white/20 focus:border-blue-400/50 focus:ring-4 focus:ring-blue-500/10"
                       />
 
                       <div className="mt-3 flex justify-end">
@@ -985,6 +1219,6 @@ export const AdminTicketsPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </AdminLayout>
   );
 };

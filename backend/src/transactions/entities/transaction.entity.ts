@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { TransactionType, TransactionStatus } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
+import { Recharge } from '../../recharges/entities/recharge.entity';
 
 @Entity('transactions')
 export class Transaction {
@@ -48,6 +49,13 @@ export class Transaction {
   @Column({ type: 'json', nullable: true })
   metadata: any;
 
+  // Recarga que generó esta transacción (pago o reembolso), cuando aplica --
+  // las cargas de balance directas (DEPOSIT por admin) no tienen una. Antes
+  // solo quedaba el recharge_uuid suelto dentro de `metadata`, sin relación
+  // real para hacer join ni para navegar de una transacción a su recarga.
+  @Column({ type: 'uuid', nullable: true })
+  recharge_id: string;
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -58,4 +66,8 @@ export class Transaction {
   @ManyToOne(() => User, (user) => user.transactions)
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @ManyToOne(() => Recharge, { nullable: true })
+  @JoinColumn({ name: 'recharge_id' })
+  recharge: Recharge;
 }
