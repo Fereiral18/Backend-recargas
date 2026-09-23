@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { Transaction } from '../../transactions/entities/transaction.entity';
+import { TransactionType, TransactionStatus } from '../../common/enums';
 
 /**
  * Service for user management operations
@@ -13,6 +15,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
   ) {}
 
   /**
@@ -111,6 +115,69 @@ export class UsersService {
     await this.userRepository.save(user);
 
     // Remove password from response
+    const { password_hash, ...userWithoutPassword } = user;
+    return userWithoutPassword as User;
+  }
+
+  /**
+   * Update a user's role, status or reseller tier (admin only).
+   * Balance is never touched here — it only moves through creditBalance()
+   * so every change leaves an auditable Transaction.
+   * @param uuid - User's unique identifier
+   * @param updateUserDto - Fields to update
+   * @returns Updated user entity without password hash
+   * @throws NotFoundException if user not found
+   */
+  async updateAsAdmin(uuid: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { uuid } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { balance, ...allowedChanges } = updateUserDto;
+    Object.assign(user, allowedChanges);
+    await this.userRepository.save(user);
+
+    const { password_hash, ...userWithoutPassword } = user;
+    return userWithoutPassword as User;
+  }
+
+  /**
+   * Credit a reseller's prepaid balance (e.g. after receiving USDT off-platform)
+   * and record a matching DEPOSIT transaction for the audit trail.
+   * @param uuid - User's unique identifier
+   * @param amount - Positive amount to add to the balance (USD)
+   * @param note - Optional free-text note (e.g. payment reference)
+   * @returns Updated user entity without password hash
+   * @throws NotFoundException if user not found
+   */
+  async creditBalance(uuid: string, amount: number, note?: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { uuid } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Incremento atómico en SQL (balance = balance + x) en vez de
+    // leer-modificar-escribir, para no pisar un débito concurrente.
+    await this.userRepository.increment({ uuid }, 'balance', amount);
+    user.balance = parseFloat((Number(user.balance) + amount).toFixed(2));
+
+    const transaction = this.transactionRepository.create({
+      user_id: user.uuid,
+      type: TransactionType.DEPOSIT,
+      status: TransactionStatus.COMPLETED,
+      amount,
+      fee: 0,
+      net_amount: amount,
+      reference: `TXN-CREDIT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      currency: 'USD',
+      metadata: note ? { note } : undefined,
+      completed_at: new Date(),
+    });
+    await this.transactionRepository.save(transaction);
+
     const { password_hash, ...userWithoutPassword } = user;
     return userWithoutPassword as User;
   }

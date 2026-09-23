@@ -34,8 +34,10 @@ export default function LoginForm() {
     if (result.success) {
       setUserInfo(result.user);
 
-      if (result.user?.role === 'ADMIN') {
+      if (result.user?.role === 'admin') {
         navigate('/admin');
+      } else if (result.user?.role === 'reseller') {
+        navigate('/reseller');
       } else {
         navigate('/dashboard');
       }

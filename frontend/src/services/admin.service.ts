@@ -51,6 +51,11 @@ export interface AdminRecharge {
 
   reference?: string | null;
 
+  // true = revendedor (ya se le debitó el balance al crear el pedido, se
+  // gestiona/entrega a mano). false/undefined = cliente final (se paga y se
+  // completa solo vía Mercado Pago + proveedor, nunca a mano).
+  paid_from_balance?: boolean;
+
   created_at: string;
 
   updated_at?: string | null;
@@ -87,19 +92,24 @@ export interface UpdateAdminUserData {
   status?: string;
 }
 
+// Coinciden exacto con backend/src/common/enums/user-role.enum.ts y
+// user-status.enum.ts — OJO que status es una mezcla real de mayúsc/minúsc
+// en el backend (ACTIVE = 'active', pero INACTIVE = 'INACTIVE', etc.), no
+// un typo de este archivo.
 export type UserRole =
-  | 'USER'
-  | 'ADMIN'
-  | 'SUPER_ADMIN';
+  | 'user'
+  | 'reseller'
+  | 'admin';
 
 export type UserStatus =
-  | 'ACTIVE'
+  | 'active'
   | 'INACTIVE'
   | 'SUSPENDED'
   | 'BANNED';
 
 export type RechargeStatus =
   | 'PENDING'
+  | 'PROCESSING'
   | 'COMPLETED'
   | 'CANCELLED'
   | 'REJECTED';
@@ -226,6 +236,23 @@ getAllUsers: async (
 
     return response.data;
   },
+
+  /**
+   * Acredita saldo directo al balance de un revendedor (ajuste manual,
+   * fuera del flujo de solicitud + comprobante).
+   */
+  creditBalance: async (
+    uuid: string,
+    amount: number,
+    note?: string
+  ): Promise<ApiResponse<User>> => {
+    const response = await api.post<ApiResponse<User>>(
+      `/users/${uuid}/balance/credit`,
+      { amount, note }
+    );
+
+    return response.data;
+  },
 };
 
 
@@ -280,6 +307,56 @@ export const adminRechargeService = {
         '/recharges/stats'
       );
 
+    return response.data;
+  },
+};
+
+
+// ============================================
+// AUDITORÍA / FINANZAS
+// ============================================
+
+export interface RevenueSummary {
+  currency: 'ARS' | 'USD';
+  gross: number;
+  refunded: number;
+  net: number;
+  count: number;
+}
+
+export interface RevenueStats {
+  b2c: RevenueSummary;
+  reseller: RevenueSummary;
+}
+
+export interface SupplierBalance {
+  ok: boolean;
+  balance: string;
+  currency: string;
+}
+
+export interface RevenuePeriod {
+  from?: string;
+  to?: string;
+}
+
+export const adminFinanceService = {
+  /**
+   * Ingresos netos de clientes finales (ARS) y revendedores (USD),
+   * descontando reembolsos. Sin `period`, trae todo el histórico.
+   */
+  getRevenueStats: async (period?: RevenuePeriod): Promise<RevenueStats> => {
+    const response = await api.get<RevenueStats>('/transactions/revenue-stats', {
+      params: period,
+    });
+    return response.data;
+  },
+
+  /**
+   * Nuestro saldo prepago con el proveedor (FZR Cards).
+   */
+  getSupplierBalance: async (): Promise<SupplierBalance> => {
+    const response = await api.get<SupplierBalance>('/supplier/fzr/catalog/balance');
     return response.data;
   },
 };
@@ -356,7 +433,7 @@ export const adminSupportService = {
         `/support/messages/${ticketId}`,
         {
           message,
-          type: 'ADMIN_MESSAGE',
+          type: 'ADMIN_RESPONSE',
         }
       );
 

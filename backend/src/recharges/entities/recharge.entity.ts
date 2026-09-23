@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { RechargeType, RechargeStatus, GameOperator } from '../../common/enums';
+import { RechargeType, RechargeStatus, GameOperator, RechargeModality } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('recharges')
@@ -39,6 +39,21 @@ export class Recharge {
   })
   operator: GameOperator;
 
+  // How the order gets fulfilled by the supplier: direct top-up to phone_number,
+  // or a gift card code. B2C is always DIRECT; resellers choose per order since
+  // the supplier prices each modality differently.
+  @Column({
+    type: 'enum',
+    enum: RechargeModality,
+    default: RechargeModality.DIRECT,
+  })
+  modality: RechargeModality;
+
+  // True for reseller orders paid from their prepaid balance at creation time.
+  // Used to avoid double-charging/double-crediting on later status transitions.
+  @Column({ name: 'paid_from_balance', default: false })
+  paid_from_balance: boolean;
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
@@ -66,11 +81,21 @@ export class Recharge {
   @Column({ nullable: true })
   proof_image_path: string; // Path to uploaded proof image
 
+  // Payment provider (Mercado Pago) tracking.
   @Column({ nullable: true })
   provider_reference: string;
 
   @Column({ type: 'json', nullable: true })
   provider_response: any;
+
+  // Supplier (FZR Cards) fulfillment tracking — separate from the payment
+  // provider fields above since a single recharge involves both: who paid
+  // us (Mercado Pago) and who we bought the top-up/gift card from (FZR).
+  @Column({ name: 'supplier_order_id', nullable: true })
+  supplier_order_id: string;
+
+  @Column({ name: 'supplier_response', type: 'json', nullable: true })
+  supplier_response: any;
 
   @CreateDateColumn()
   created_at: Date;

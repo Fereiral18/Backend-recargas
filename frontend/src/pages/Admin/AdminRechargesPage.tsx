@@ -8,7 +8,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import {
-  ArrowLeft,
   Search,
   RefreshCw,
   Smartphone,
@@ -44,6 +43,8 @@ import {
   GameOperatorLabels,
   RechargeTypeLabels,
 } from '../../constants/enums';
+
+import { AdminLayout } from '../../components/layouts/AdminLayout';
 
 
 export const AdminRechargesPage = () => {
@@ -120,7 +121,7 @@ export const AdminRechargesPage = () => {
         role?: string;
       };
 
-      if (user.role !== 'ADMIN') {
+      if (user.role !== 'admin') {
         toast.error(
           'No tienes permisos de administrador'
         );
@@ -200,8 +201,15 @@ export const AdminRechargesPage = () => {
         error
       );
 
+      const backendMessage = (
+        error as {
+          response?: { data?: { message?: string } };
+        }
+      )?.response?.data?.message;
+
       toast.error(
-        'Error al actualizar el estado'
+        backendMessage ||
+          'Error al actualizar el estado'
       );
     }
   };
@@ -321,6 +329,18 @@ export const AdminRechargesPage = () => {
             Clock3,
         };
 
+      case 'PROCESSING':
+        return {
+          label:
+            RechargeStatusLabels[status],
+          className:
+            'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20',
+          dot:
+            'bg-cyan-400',
+          icon:
+            RefreshCw,
+        };
+
       case 'COMPLETED':
         return {
           label:
@@ -372,39 +392,7 @@ export const AdminRechargesPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-
-      {/* Background */}
-      <div className="
-        pointer-events-none
-        fixed
-        inset-0
-        overflow-hidden
-      ">
-        <div className="
-          absolute
-          -left-40
-          -top-40
-          h-96
-          w-96
-          rounded-full
-          bg-violet-600/10
-          blur-3xl
-        " />
-
-        <div className="
-          absolute
-          -bottom-40
-          -right-40
-          h-96
-          w-96
-          rounded-full
-          bg-blue-600/10
-          blur-3xl
-        " />
-      </div>
-
-
+    <AdminLayout>
       <main className="
         relative
         mx-auto
@@ -421,37 +409,6 @@ export const AdminRechargesPage = () => {
         ======================================= */}
 
         <div className="mb-8">
-
-          <button
-            type="button"
-            onClick={() =>
-              navigate('/admin')
-            }
-            className="
-              mb-6
-              inline-flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-white/10
-              bg-white/[0.04]
-              px-4
-              py-2.5
-              text-sm
-              font-medium
-              text-slate-300
-              transition
-              hover:border-white/20
-              hover:bg-white/[0.08]
-              hover:text-white
-            "
-          >
-            <ArrowLeft size={17} />
-
-            Volver al panel
-          </button>
-
 
           <div className="
             flex
@@ -709,6 +666,10 @@ export const AdminRechargesPage = () => {
                   Pendientes
                 </option>
 
+                <option value="PROCESSING">
+                  En proceso
+                </option>
+
                 <option value="COMPLETED">
                   Completadas
                 </option>
@@ -858,7 +819,7 @@ export const AdminRechargesPage = () => {
 
             <div className="
               hidden
-              lg:block
+              2xl:block
             ">
 
               <div className="
@@ -933,7 +894,7 @@ export const AdminRechargesPage = () => {
             <div className="
               space-y-3
               p-4
-              lg:hidden
+              2xl:hidden
             ">
 
               {Array.from({
@@ -1063,7 +1024,7 @@ export const AdminRechargesPage = () => {
             <div className="
               hidden
               overflow-x-auto
-              lg:block
+              2xl:block
             ">
 
               <table className="
@@ -1557,6 +1518,10 @@ export const AdminRechargesPage = () => {
                                   Pendiente
                                 </option>
 
+                                <option value="PROCESSING">
+                                  En proceso
+                                </option>
+
                                 <option value="COMPLETED">
                                   Completada
                                 </option>
@@ -1608,7 +1573,7 @@ export const AdminRechargesPage = () => {
             <div className="
               space-y-3
               p-3
-              lg:hidden
+              2xl:hidden
             ">
 
               {recharges.map((recharge) => {
@@ -2031,6 +1996,10 @@ export const AdminRechargesPage = () => {
 
                           <option value="PENDING">
                             Pendiente
+                          </option>
+
+                          <option value="PROCESSING">
+                            En proceso
                           </option>
 
                           <option value="COMPLETED">
@@ -2871,105 +2840,155 @@ export const AdminRechargesPage = () => {
               sm:p-5
             ">
 
-              <div className="
-                grid
-                grid-cols-1
-                gap-2
-                sm:grid-cols-3
-              ">
+              {/* Las recargas de clientes finales se pagan y entregan solas
+                  (Mercado Pago + proveedor) — el backend rechaza marcarlas a
+                  mano. Solo mostramos Aprobar/Rechazar para pedidos de
+                  revendedor (pagados de balance) que sigan pendientes de
+                  entrega. */}
+              {selectedRecharge.paid_from_balance &&
+              selectedRecharge.status === 'PENDING' ? (
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleUpdateStatus(
-                      selectedRecharge.uuid,
-                      'COMPLETED'
-                    )
-                  }
-                  className="
-                    inline-flex
-                    h-11
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    bg-emerald-500
-                    px-4
-                    text-xs
-                    font-bold
-                    text-white
-                    shadow-lg
-                    shadow-emerald-500/10
-                    transition
-                    hover:bg-emerald-400
-                  "
-                >
-                  <Check size={16} />
+                <div className="
+                  grid
+                  grid-cols-1
+                  gap-2
+                  sm:grid-cols-3
+                ">
 
-                  Aprobar recarga
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateStatus(
+                        selectedRecharge.uuid,
+                        'COMPLETED'
+                      )
+                    }
+                    className="
+                      inline-flex
+                      h-11
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-emerald-500
+                      px-4
+                      text-xs
+                      font-bold
+                      text-white
+                      shadow-lg
+                      shadow-emerald-500/10
+                      transition
+                      hover:bg-emerald-400
+                    "
+                  >
+                    <Check size={16} />
 
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleUpdateStatus(
-                      selectedRecharge.uuid,
-                      'FAILED'
-                    )
-                  }
-                  className="
-                    inline-flex
-                    h-11
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    bg-red-500/10
-                    px-4
-                    text-xs
-                    font-bold
-                    text-red-400
-                    ring-1
-                    ring-red-500/20
-                    transition
-                    hover:bg-red-500/20
-                  "
-                >
-                  <X size={16} />
-
-                  Rechazar recarga
-                </button>
+                    Marcar entregada
+                  </button>
 
 
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="
-                    inline-flex
-                    h-11
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-white/10
-                    bg-white/[0.04]
-                    px-4
-                    text-xs
-                    font-semibold
-                    text-slate-400
-                    transition
-                    hover:bg-white/[0.08]
-                    hover:text-white
-                  "
-                >
-                  <X size={15} />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateStatus(
+                        selectedRecharge.uuid,
+                        'FAILED'
+                      )
+                    }
+                    className="
+                      inline-flex
+                      h-11
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-red-500/10
+                      px-4
+                      text-xs
+                      font-bold
+                      text-red-400
+                      ring-1
+                      ring-red-500/20
+                      transition
+                      hover:bg-red-500/20
+                    "
+                  >
+                    <X size={16} />
 
-                  Cancelar
-                </button>
+                    Marcar fallida
+                  </button>
 
-              </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="
+                      inline-flex
+                      h-11
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-white/[0.04]
+                      px-4
+                      text-xs
+                      font-semibold
+                      text-slate-400
+                      transition
+                      hover:bg-white/[0.08]
+                      hover:text-white
+                    "
+                  >
+                    <X size={15} />
+
+                    Cancelar
+                  </button>
+
+                </div>
+
+              ) : (
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                  <p className="text-xs leading-5 text-slate-500">
+                    {selectedRecharge.paid_from_balance
+                      ? 'Este pedido de revendedor ya fue resuelto — no se puede volver a marcar.'
+                      : 'Las recargas de clientes finales se pagan y entregan solas (Mercado Pago + proveedor). No se pueden marcar manualmente.'}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="
+                      inline-flex
+                      h-11
+                      shrink-0
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-white/[0.04]
+                      px-4
+                      text-xs
+                      font-semibold
+                      text-slate-400
+                      transition
+                      hover:bg-white/[0.08]
+                      hover:text-white
+                    "
+                  >
+                    <X size={15} />
+
+                    Cerrar
+                  </button>
+
+                </div>
+
+              )}
 
             </div>
 
@@ -2979,6 +2998,6 @@ export const AdminRechargesPage = () => {
 
       )}
 
-    </div>
+    </AdminLayout>
   );
 };

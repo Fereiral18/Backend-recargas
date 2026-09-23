@@ -8,9 +8,10 @@ import { SupportMessagesService } from './services/support-messages.service';
 import { SupportService } from './services/support.service';
 import { SupportTicket } from './entities/support-ticket.entity';
 import { SupportMessage } from './entities/support-message.entity';
+import { RechargesModule } from '../recharges/recharges.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SupportTicket, SupportMessage])],
+  imports: [TypeOrmModule.forFeature([SupportTicket, SupportMessage]), RechargesModule],
   controllers: [
     SupportController,
     SupportTicketsController,

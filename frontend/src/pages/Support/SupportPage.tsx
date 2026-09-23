@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supportService } from '../../services';
+import { ResellerLayout } from '../../components/layouts/ResellerLayout';
 import {
   TicketStatusLabels,
   TicketPriorityLabels,
@@ -26,22 +27,47 @@ import {
   Zap,
 } from 'lucide-react';
 
+const formDataDefault: {
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  recharge_id?: string;
+} = {
+  subject: '',
+  description: '',
+  category: 'general',
+  priority: 'MEDIUM',
+};
+
 export const SupportPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isReseller = currentUser?.role === 'reseller';
 
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const prefill = (location.state as { prefill?: Partial<typeof formDataDefault> })?.prefill;
+
+  const [showCreateForm, setShowCreateForm] = useState(!!prefill);
 
   const [formData, setFormData] = useState({
-    subject: '',
-    description: '',
-    category: 'general',
-    priority: 'MEDIUM',
+    ...formDataDefault,
+    ...prefill,
   });
 
   useEffect(() => {
     loadTickets();
+
+    // Limpia el state de navegación para que un refresh no vuelva a abrir
+    // el formulario precargado.
+    if (prefill) {
+      window.history.replaceState({}, document.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTickets = async () => {
@@ -200,14 +226,8 @@ export const SupportPage = () => {
     return categories[category] || category;
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Background decoration */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
-        <div className="absolute -right-40 top-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
-      </div>
-
+  const content = (
+    <>
       <div className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <header className="mb-8">
@@ -235,32 +255,34 @@ export const SupportPage = () => {
             </div>
 
             <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="
-                  inline-flex
-                  min-h-11
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[0.04]
-                  px-4
-                  text-sm
-                  font-semibold
-                  text-slate-300
-                  transition
-                  hover:border-white/20
-                  hover:bg-white/[0.08]
-                  hover:text-white
-                "
-              >
-                <ArrowLeft size={17} />
-                Volver
-              </button>
+              {!isReseller && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="
+                    inline-flex
+                    min-h-11
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border
+                    border-white/10
+                    bg-white/[0.04]
+                    px-4
+                    text-sm
+                    font-semibold
+                    text-slate-300
+                    transition
+                    hover:border-white/20
+                    hover:bg-white/[0.08]
+                    hover:text-white
+                  "
+                >
+                  <ArrowLeft size={17} />
+                  Volver
+                </button>
+              )}
 
               {!showCreateForm && (
                 <button
@@ -397,6 +419,13 @@ export const SupportPage = () => {
 
             <form onSubmit={handleSubmit} className="p-5 sm:p-7">
               <div className="grid grid-cols-1 gap-5">
+                {formData.recharge_id && (
+                  <div className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-300">
+                    <Ticket size={13} />
+                    Este ticket va a quedar vinculado a esa recarga
+                  </div>
+                )}
+
                 {/* Subject */}
                 <div>
                   <label
@@ -753,6 +782,12 @@ export const SupportPage = () => {
                             <span className="text-xs text-slate-700">
                               #{ticket.uuid?.slice(0, 8)}
                             </span>
+
+                            {ticket.recharge && (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-300">
+                                Recarga {ticket.recharge.reference}
+                              </span>
+                            )}
                           </div>
 
                           <h3 className="break-words text-base font-bold text-white sm:text-lg">
@@ -855,6 +890,21 @@ export const SupportPage = () => {
           )}
         </section>
       </div>
+    </>
+  );
+
+  if (isReseller) {
+    return <ResellerLayout>{content}</ResellerLayout>;
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
+        <div className="absolute -right-40 top-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
+      </div>
+
+      {content}
     </div>
   );
 };

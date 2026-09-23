@@ -79,11 +79,53 @@ export interface DashboardData {
 // ============================================
 
 export interface CreateRechargeData {
+  operator: string;
+  type: string;
+  package: string;
+  phone_number: string;
+}
+
+export interface RechargePackage {
+  uuid: string;
+  operator: string;
+  package: string;
+  type: string;
+  name: string;
+  diamonds?: number;
+  b2c_price_ars: number;
+  reseller_price_usd: number;
+  active: boolean;
+}
+
+export interface PaymentPreference {
+  preference_id: string;
+  init_point: string;
+  sandbox_init_point?: string;
+}
+
+
+// ============================================
+// CARGA DE SALDO (REVENDEDORES)
+// ============================================
+
+export interface BalanceTopUpRequest {
+  uuid: string;
+  user_id: string;
+  user?: { email: string; first_name: string; last_name: string };
   amount: number;
-  currency?: string;
-  paymentMethod?: string;
-  phoneNumber?: string;
-  userId?: string;
+  proof_image_path: string;
+  note?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewed_by?: string;
+  review_note?: string;
+  reviewed_at?: string;
+  created_at: string;
+}
+
+export interface CreateBalanceTopUpData {
+  amount: number;
+  note?: string;
+  proof_image: File;
 }
 
 export interface RechargeFilters {
@@ -150,7 +192,17 @@ export interface Transaction {
   type: string;
   status: string;
   description?: string;
+  reference?: string;
+  recharge_id?: string | null;
+  recharge?: {
+    uuid: string;
+    reference: string;
+    operator: string;
+    package?: string | null;
+    status: string;
+  } | null;
   createdAt?: string;
+  created_at?: string;
   updatedAt?: string;
 }
 
@@ -177,6 +229,7 @@ export interface CreateTicketData {
   message: string;
   category?: string;
   priority?: string;
+  recharge_id?: string;
 }
 
 export interface TicketFilters {
@@ -199,9 +252,20 @@ export interface Ticket {
   user_id?: string;
   subject: string;
   message?: string;
+  description?: string;
   status: string;
   priority?: string;
   category?: string;
+  assigned_to?: string | null;
+  recharge_id?: string | null;
+  recharge?: {
+    uuid: string;
+    reference: string;
+    operator: string;
+    package?: string | null;
+    status: string;
+  } | null;
+  created_at?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -220,8 +284,17 @@ export interface CreateMessageData {
 
 export interface TicketMessage {
   id: string;
+  uuid: string;
   ticket_id: string;
   user_id?: string;
   message: string;
+  type?: 'USER_MESSAGE' | 'ADMIN_RESPONSE' | 'SYSTEM_MESSAGE';
+  created_at?: string;
   createdAt?: string;
+  user?: {
+    uuid?: string;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+  };
 }

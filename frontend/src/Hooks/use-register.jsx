@@ -37,8 +37,13 @@ export default function useRegister() {
 			return;
 		}
 
-		if (password.length < 6) {
-			toast.error('La contraseña debe tener al menos 6 caracteres');
+		if (password.length < 8) {
+			toast.error('La contraseña debe tener al menos 8 caracteres');
+			return;
+		}
+
+		if (password.length > 72) {
+			toast.error('La contraseña no puede superar los 72 caracteres');
 			return;
 		}
 

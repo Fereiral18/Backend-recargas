@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, authService } from '../../services';
 import { toast } from 'react-toastify';
+import { AdminLayout } from '../../components/layouts/AdminLayout';
+import { ResellerLayout } from '../../components/layouts/ResellerLayout';
 
 import {
   ArrowLeft,
@@ -41,6 +43,10 @@ interface ProfileFormData {
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = currentUser?.role === 'admin';
+  const isReseller = currentUser?.role === 'reseller';
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,13 +129,13 @@ export const ProfilePage = () => {
   };
 
   const getRoleLabel = () => {
-    return profile?.role === 'ADMIN'
-      ? 'Administrador'
-      : 'Usuario';
+    if (profile?.role === 'admin') return 'Administrador';
+    if (profile?.role === 'reseller') return 'Revendedor';
+    return 'Usuario';
   };
 
   const getStatusLabel = () => {
-    if (profile?.status === 'ACTIVE') {
+    if (profile?.status?.toLowerCase() === 'active') {
       return 'Activo';
     }
 
@@ -171,17 +177,8 @@ export const ProfilePage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Background decoration */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
-
-        <div className="absolute right-0 top-1/3 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
-
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-blue-600/5 blur-3xl" />
-      </div>
-
+  const content = (
+    <>
       <div className="relative mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <header className="mb-8">
@@ -209,32 +206,34 @@ export const ProfilePage = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="
-                inline-flex
-                min-h-11
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                border
-                border-white/10
-                bg-white/[0.04]
-                px-4
-                text-sm
-                font-semibold
-                text-slate-300
-                transition
-                hover:border-white/20
-                hover:bg-white/[0.08]
-                hover:text-white
-              "
-            >
-              <ArrowLeft size={17} />
-              Volver al Dashboard
-            </button>
+            {!isAdmin && !isReseller && (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="
+                  inline-flex
+                  min-h-11
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  border
+                  border-white/10
+                  bg-white/[0.04]
+                  px-4
+                  text-sm
+                  font-semibold
+                  text-slate-300
+                  transition
+                  hover:border-white/20
+                  hover:bg-white/[0.08]
+                  hover:text-white
+                "
+              >
+                <ArrowLeft size={17} />
+                Volver al Dashboard
+              </button>
+            )}
           </div>
         </header>
 
@@ -748,6 +747,26 @@ export const ProfilePage = () => {
           )}
         </section>
       </div>
+    </>
+  );
+
+  if (isAdmin) {
+    return <AdminLayout>{content}</AdminLayout>;
+  }
+
+  if (isReseller) {
+    return <ResellerLayout>{content}</ResellerLayout>;
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
+        <div className="absolute right-0 top-1/3 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-blue-600/5 blur-3xl" />
+      </div>
+
+      {content}
     </div>
   );
 };

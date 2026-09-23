@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SupportTicket } from '../entities/support-ticket.entity';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { TicketStatus } from '../../common/enums';
+import { RechargesService } from '../../recharges/services/recharges.service';
 
 /**
  * Service for managing support tickets
@@ -15,6 +16,7 @@ export class SupportTicketsService {
   constructor(
     @InjectRepository(SupportTicket)
     private readonly ticketRepository: Repository<SupportTicket>,
+    private readonly rechargesService: RechargesService,
   ) {}
 
   /**
@@ -24,6 +26,17 @@ export class SupportTicketsService {
    * @returns Created ticket entity
    */
   async create(user_id: string, createTicketDto: CreateTicketDto) {
+    // Si el ticket referencia una recarga, siempre validamos que sea del
+    // mismo usuario que lo crea -- sino cualquiera podría abrir un ticket
+    // "vinculado" a la recarga de otra persona.
+    if (createTicketDto.recharge_id) {
+      const recharge = await this.rechargesService.findOne(createTicketDto.recharge_id);
+
+      if (recharge.user_id !== user_id) {
+        throw new ForbiddenException('Esa recarga no te pertenece');
+      }
+    }
+
     const ticket = this.ticketRepository.create({
       user_id,
       ...createTicketDto,
@@ -39,8 +52,26 @@ export class SupportTicketsService {
    */
   async findAll(filters: any) {
     const query = this.ticketRepository.createQueryBuilder('ticket');
-    query.leftJoinAndSelect('ticket.user', 'user');
-    query.leftJoinAndSelect('ticket.assigned_to_user', 'assigned_to_user');
+    // leftJoin + addSelect (nunca leftJoinAndSelect) para no traer
+    // user.password_hash junto con el resto de la fila.
+    query.leftJoin('ticket.user', 'user');
+    query.leftJoin('ticket.assigned_to_user', 'assigned_to_user');
+    query.leftJoin('ticket.recharge', 'recharge');
+    query.addSelect([
+      'user.uuid',
+      'user.first_name',
+      'user.last_name',
+      'user.email',
+      'user.role',
+      'assigned_to_user.uuid',
+      'assigned_to_user.first_name',
+      'assigned_to_user.last_name',
+      'recharge.uuid',
+      'recharge.reference',
+      'recharge.operator',
+      'recharge.package',
+      'recharge.status',
+    ]);
 
     if (filters.user_id) {
       query.andWhere('ticket.user_id = :user_id', {
@@ -93,10 +124,19 @@ export class SupportTicketsService {
    * @throws NotFoundException if ticket not found
    */
   async findOne(uuid: string) {
-    const ticket = await this.ticketRepository.findOne({
-      where: { uuid },
-      relations: ['messages'],
-    });
+    const ticket = await this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.messages', 'messages')
+      .leftJoin('ticket.recharge', 'recharge')
+      .addSelect([
+        'recharge.uuid',
+        'recharge.reference',
+        'recharge.operator',
+        'recharge.package',
+        'recharge.status',
+      ])
+      .where('ticket.uuid = :uuid', { uuid })
+      .getOne();
 
     if (!ticket) {
       throw new NotFoundException('Ticket not found');

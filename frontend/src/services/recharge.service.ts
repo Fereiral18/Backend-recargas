@@ -5,17 +5,21 @@ import type {
   Recharge,
   RechargeFilters,
   RechargeStats,
+  RechargePackage,
   ApiResponse,
 } from './types';
 
 export const rechargeService = {
   /**
-   * Crear nueva recarga
+   * Crear nueva recarga. El precio lo calcula el backend a partir del
+   * catálogo (operator + package) — el frontend nunca manda un monto.
+   * OJO: a diferencia de otros endpoints, este devuelve la recarga directo
+   * (sin envolver en {message, data}).
    */
   create: async (
     rechargeData: CreateRechargeData
-  ): Promise<ApiResponse<Recharge>> => {
-    const response = await api.post<ApiResponse<Recharge>>(
+  ): Promise<Recharge> => {
+    const response = await api.post<Recharge>(
       '/recharges',
       rechargeData
     );
@@ -24,18 +28,15 @@ export const rechargeService = {
   },
 
   /**
-   * Crear recarga con archivo
+   * Obtener el catálogo de paquetes vendibles (precio real, definido por un admin).
    */
-  createWithFile: async (
-    formData: FormData
-  ): Promise<ApiResponse<Recharge>> => {
-    const response = await api.post<ApiResponse<Recharge>>(
-      '/recharges',
-      formData,
+  getPackages: async (
+    operator: string
+  ): Promise<RechargePackage[]> => {
+    const response = await api.get<RechargePackage[]>(
+      '/recharge-packages',
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        params: { operator },
       }
     );
 
@@ -75,12 +76,12 @@ export const rechargeService = {
   },
 
   /**
-   * Obtener recarga por UUID
+   * Obtener recarga por UUID (devuelta directo, sin envolver).
    */
   getById: async (
     uuid: string
-  ): Promise<ApiResponse<Recharge>> => {
-    const response = await api.get<ApiResponse<Recharge>>(
+  ): Promise<Recharge> => {
+    const response = await api.get<Recharge>(
       `/recharges/${uuid}`
     );
 
@@ -88,16 +89,16 @@ export const rechargeService = {
   },
 
   /**
-   * Obtener estadísticas
+   * Obtener estadísticas (devueltas directo, sin envolver).
    */
   getStats: async (
     userId?: string
-  ): Promise<ApiResponse<RechargeStats>> => {
+  ): Promise<RechargeStats> => {
     const params = userId
       ? { user_id: userId }
       : {};
 
-    const response = await api.get<ApiResponse<RechargeStats>>(
+    const response = await api.get<RechargeStats>(
       '/recharges/stats',
       {
         params,
@@ -108,12 +109,12 @@ export const rechargeService = {
   },
 
   /**
-   * Cancelar recarga
+   * Cancelar recarga (devuelta directo, sin envolver).
    */
   cancel: async (
     uuid: string
-  ): Promise<ApiResponse<Recharge>> => {
-    const response = await api.patch<ApiResponse<Recharge>>(
+  ): Promise<Recharge> => {
+    const response = await api.patch<Recharge>(
       `/recharges/${uuid}/cancel`
     );
 

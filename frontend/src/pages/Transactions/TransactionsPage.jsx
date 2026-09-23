@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowDownLeft,
-  ArrowUpRight,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -29,16 +28,21 @@ import {
 } from "lucide-react";
 
 import { transactionService } from "../../services";
+import { ResellerLayout } from "../../components/layouts/ResellerLayout";
 
 import {
   TransactionTypeLabels,
   TransactionStatusLabels,
+  GameOperatorLabels,
 } from "../../constants/enums";
 
 import { toast } from "react-toastify";
 
 export const TransactionsPage = () => {
   const navigate = useNavigate();
+
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isReseller = currentUser?.role === "reseller";
 
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(null);
@@ -53,11 +57,16 @@ export const TransactionsPage = () => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
 
-      // Cargar balance
-      const balanceResponse =
-        await transactionService.getBalance(user.uuid);
+      // El "balance total" solo tiene sentido para revendedores (saldo
+      // prepago); un cliente final no tiene balance -- paga cada recarga
+      // directo con Mercado Pago -- así que ese resumen le mostraría un
+      // número negativo sin ningún sentido (todo compra, nada de depósito).
+      if (user?.role === "reseller") {
+        const balanceResponse =
+          await transactionService.getBalance(user.uuid);
 
-      setBalance(balanceResponse.data);
+        setBalance(balanceResponse.data);
+      }
 
       // Cargar transacciones
       const transactionsResponse =
@@ -126,14 +135,10 @@ export const TransactionsPage = () => {
     const classes = {
       DEPOSIT:
         "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-      WITHDRAWAL:
-        "border-orange-400/20 bg-orange-400/10 text-orange-300",
       PURCHASE:
         "border-violet-400/20 bg-violet-400/10 text-violet-300",
       REFUND:
         "border-cyan-400/20 bg-cyan-400/10 text-cyan-300",
-      FEE:
-        "border-red-400/20 bg-red-400/10 text-red-300",
     };
 
     return (
@@ -145,10 +150,8 @@ export const TransactionsPage = () => {
   const getTypeIcon = (type) => {
     const icons = {
       DEPOSIT: <ArrowDownLeft size={18} />,
-      WITHDRAWAL: <ArrowUpRight size={18} />,
       PURCHASE: <ShoppingCart size={18} />,
       REFUND: <RefreshCw size={18} />,
-      FEE: <CircleDollarSign size={18} />,
     };
 
     return (
@@ -186,29 +189,34 @@ export const TransactionsPage = () => {
     }
   };
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07070d] text-white">
-      {/* =====================================================
-          BACKGROUND
-      ====================================================== */}
+  // Manda a Soporte con los datos ya cargados. Si la transacción viene de
+  // una recarga, el ticket queda vinculado a esa recarga (no a la
+  // transacción en sí, que es solo el asiento contable).
+  const handleReportIssue = (transaction) => {
+    const recharge = transaction.recharge;
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[120px]" />
+    navigate("/support", {
+      state: {
+        prefill: {
+          subject: `Problema con la transacción ${transaction.reference}`,
+          category: recharge ? "recarga" : "pago",
+          recharge_id: recharge?.uuid,
+          description: `Transacción ${transaction.reference} (${
+            TransactionTypeLabels[transaction.type] || transaction.type
+          }, $${transaction.amount} ${transaction.currency || ""})${
+            recharge
+              ? ` -- recarga ${recharge.reference} (${
+                  GameOperatorLabels[recharge.operator] || recharge.operator
+                }${recharge.package ? " - " + recharge.package : ""})`
+              : ""
+          }.\n\nDescribí acá el problema: `,
+        },
+      },
+    });
+  };
 
-        <div className="absolute right-[-180px] top-[12%] h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[130px]" />
-
-        <div className="absolute bottom-[-220px] left-[30%] h-[500px] w-[500px] rounded-full bg-fuchsia-600/10 blur-[150px]" />
-
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
-      </div>
-
+  const content = (
+    <>
       <div className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         {/* =====================================================
             HEADER
@@ -240,36 +248,38 @@ export const TransactionsPage = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              className="
-                inline-flex
-                w-fit
-                items-center
-                gap-2
-                rounded-2xl
-                border
-                border-white/10
-                bg-white/[0.04]
-                px-4
-                py-3.5
-                text-sm
-                font-semibold
-                text-white/60
-                backdrop-blur-xl
-                transition
-                hover:border-white/20
-                hover:bg-white/[0.08]
-                hover:text-white
-              "
-            >
-              <ArrowLeft size={17} />
+            {!isReseller && (
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard")}
+                className="
+                  inline-flex
+                  w-fit
+                  items-center
+                  gap-2
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-white/[0.04]
+                  px-4
+                  py-3.5
+                  text-sm
+                  font-semibold
+                  text-white/60
+                  backdrop-blur-xl
+                  transition
+                  hover:border-white/20
+                  hover:bg-white/[0.08]
+                  hover:text-white
+                "
+              >
+                <ArrowLeft size={17} />
 
-              <span className="hidden sm:inline">
-                Volver
-              </span>
-            </button>
+                <span className="hidden sm:inline">
+                  Volver
+                </span>
+              </button>
+            )}
           </div>
         </motion.header>
 
@@ -329,14 +339,16 @@ export const TransactionsPage = () => {
                 positive
               />
 
-              {/* Retiros */}
+              {/* Reembolsos: recargas de revendedor que fallaron y se
+                  devolvieron al balance -- a diferencia de "Retiros", que
+                  hoy no lo genera ningún flujo real de la plataforma. */}
               <BalanceItem
-                icon={<ArrowUpRight size={18} />}
-                label="Total Retiros"
-                value={`-$${parseFloat(
-                  balance.total_withdrawals || 0
+                icon={<RefreshCw size={18} />}
+                label="Total Reembolsos"
+                value={`+$${parseFloat(
+                  balance.total_refunds || 0
                 ).toFixed(2)}`}
-                negative
+                positive
               />
 
               {/* Compras */}
@@ -416,20 +428,12 @@ export const TransactionsPage = () => {
                   Depósito
                 </option>
 
-                <option value="WITHDRAWAL">
-                  Retiro
-                </option>
-
                 <option value="PURCHASE">
                   Compra
                 </option>
 
                 <option value="REFUND">
                   Reembolso
-                </option>
-
-                <option value="FEE">
-                  Comisión
                 </option>
               </select>
 
@@ -905,6 +909,18 @@ export const TransactionsPage = () => {
                               }
                             />
 
+                            {transaction.recharge && (
+                              <DetailItem
+                                icon={
+                                  <ShoppingCart size={16} />
+                                }
+                                label="Recarga vinculada"
+                                value={
+                                  transaction.recharge.reference
+                                }
+                              />
+                            )}
+
                             {transaction.transaction_id && (
                               <DetailItem
                                 icon={
@@ -1011,8 +1027,9 @@ export const TransactionsPage = () => {
                             </div>
                           )}
 
-                          {/* Metadata */}
-                          {transaction.metadata && (
+                          {/* Nota (ej: comentario del admin al acreditar
+                              saldo directo, o al aprobar una solicitud) */}
+                          {transaction.metadata?.note && (
                             <div className="mt-5 rounded-2xl border border-white/[0.06] bg-black/[0.12] p-4">
                               <div className="mb-2 flex items-center gap-2">
                                 <Sparkles
@@ -1021,19 +1038,29 @@ export const TransactionsPage = () => {
                                 />
 
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">
-                                  Información adicional
+                                  Nota
                                 </span>
                               </div>
 
-                              <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all text-[10px] leading-5 text-white/30">
-                                {JSON.stringify(
-                                  transaction.metadata,
-                                  null,
-                                  2
-                                )}
-                              </pre>
+                              <p className="text-xs leading-5 text-white/50">
+                                {transaction.metadata.note}
+                              </p>
                             </div>
                           )}
+
+                          {/* Reportar un problema */}
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleReportIssue(transaction)
+                              }
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-300"
+                            >
+                              <AlertCircle size={13} />
+                              Reportar un problema
+                            </button>
+                          </div>
                         </div>
                       </motion.article>
                     );
@@ -1073,6 +1100,30 @@ export const TransactionsPage = () => {
             </motion.div>
           )}
       </div>
+    </>
+  );
+
+  if (isReseller) {
+    return <ResellerLayout>{content}</ResellerLayout>;
+  }
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[#07070d] text-white">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[120px]" />
+        <div className="absolute right-[-180px] top-[12%] h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[130px]" />
+        <div className="absolute bottom-[-220px] left-[30%] h-[500px] w-[500px] rounded-full bg-fuchsia-600/10 blur-[150px]" />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+      </div>
+
+      {content}
     </main>
   );
 };

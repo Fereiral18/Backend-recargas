@@ -4,6 +4,7 @@ import {
   IsString,
   IsOptional,
   IsEnum,
+  IsUUID,
   MinLength,
 } from 'class-validator';
 import { UserRole, UserStatus } from '../../common/enums';
@@ -77,4 +78,13 @@ export class UpdateUserDto {
   })
   @IsOptional()
   balance?: number;
+
+  @ApiProperty({
+    example: '9c858901-8a57-4791-81fe-4c455b099bc9',
+    description: 'Reseller tier UUID (resellers only)',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  tier_id?: string;
 }

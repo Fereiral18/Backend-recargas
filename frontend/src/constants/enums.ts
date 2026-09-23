@@ -97,6 +97,7 @@ export const GameOperator = {
 
 export const RechargeStatus = {
   PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
   CANCELLED: 'CANCELLED',
@@ -163,6 +164,7 @@ export const RechargeTypeLabels = {
 
 export const RechargeStatusLabels = {
   [RechargeStatus.PENDING]: 'Pendiente',
+  [RechargeStatus.PROCESSING]: 'En proceso',
   [RechargeStatus.COMPLETED]: 'Completada',
   [RechargeStatus.FAILED]: 'Fallida',
   [RechargeStatus.CANCELLED]: 'Cancelada',

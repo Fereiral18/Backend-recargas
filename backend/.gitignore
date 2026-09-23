@@ -57,3 +57,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Archivos subidos por usuarios (comprobantes de pago): datos personales, nunca al repo
+uploads/

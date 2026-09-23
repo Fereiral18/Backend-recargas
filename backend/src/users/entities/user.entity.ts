@@ -1,8 +1,18 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 import { Recharge } from '../../recharges/entities/recharge.entity';
 import { SupportTicket } from '../../support/entities/support-ticket.entity';
 import { SupportMessage } from '../../support/entities/support-message.entity';
+import { ResellerTier } from '../../resellers/entities/reseller-tier.entity';
 
 @Entity('users')
 export class User {
@@ -30,8 +40,16 @@ export class User {
   @Column({ default: 'active' })
   status: string;
 
+  // Reseller-only prepaid balance (USD/USDT). Not used for B2C direct-purchase users.
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   balance: number;
+
+  @Column({ name: 'tier_id', type: 'uuid', nullable: true })
+  tier_id: string;
+
+  @ManyToOne(() => ResellerTier, { nullable: true })
+  @JoinColumn({ name: 'tier_id' })
+  tier: ResellerTier;
 
   @Column({ name: 'last_login', nullable: true })
   last_login: Date;

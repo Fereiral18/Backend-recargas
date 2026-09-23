@@ -26,10 +26,23 @@ export class SupportMessagesService {
   }
 
   async findByTicket(ticket_id: string) {
-    return this.messageRepository.find({
-      where: { ticket_id },
-      order: { created_at: 'ASC' },
-    });
+    return this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoin('message.user', 'user')
+      .addSelect(['user.uuid', 'user.first_name', 'user.last_name', 'user.role'])
+      .where('message.ticket_id = :ticket_id', { ticket_id })
+      .orderBy('message.created_at', 'ASC')
+      .getMany();
+  }
+
+  async findOne(uuid: string) {
+    const message = await this.messageRepository.findOne({ where: { uuid } });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    return message;
   }
 
   async markAsRead(uuid: string) {
